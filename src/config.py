@@ -1533,7 +1533,7 @@ class Config:
             run_immediately=legacy_run_immediately,
             market_review_enabled=os.getenv('MARKET_REVIEW_ENABLED', 'true').lower() == 'true',
             market_review_region=cls._parse_market_review_region(
-                os.getenv('MARKET_REVIEW_REGION', 'cn')
+                os.getenv('MARKET_REVIEW_REGION', 'us')
             ),
             trading_day_check_enabled=os.getenv('TRADING_DAY_CHECK_ENABLED', 'true').lower() != 'false',
             webui_enabled=os.getenv('WEBUI_ENABLED', 'false').lower() == 'true',
