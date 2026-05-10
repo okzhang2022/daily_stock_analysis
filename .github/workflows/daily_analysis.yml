@@ -294,9 +294,17 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           # 强行推送当前最新的代码和报告到 HF
-          # 先把 Git 变成一个“没有历史”的新起点
+          # 1. 自报家门，防止 Git 报错
+          git config --global user.email "github-actions@github.com"
+          git config --global user.name "github-actions"
+          
+          # 2. 彻底抹除带大文件的历史记录，创建一个干净的“起跑点”
           git checkout --orphan latest_branch
           git add -A
-          git commit -am "Clean sync"
-          # 强行推这个“干净”的分支到 HF 的 main
-          git push --force https://okzhang2022:$HF_TOKEN@huggingface.co/spaces/okzhanghy/daily_stock_analysis latest_branch:main
+          
+          # 3. 提交当前所有文件（不带任何历史包袱）
+          git commit -m "Initial clean sync to HF"
+          
+          # 4. 强行推送到 Hugging Face 的 main 分支
+          # 这里的 latest_branch:main 意思是把本地的新分支推给远程的 main
+          git push --force https://okzhang2022:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/okzhanghy/daily_stock_analysis latest_branch:main
