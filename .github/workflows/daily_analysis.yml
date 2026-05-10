@@ -294,4 +294,4 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           # 强行推送当前最新的代码和报告到 HF
-          git push --force https://okzhang2022:$HF_TOKEN@huggingface.co/spaces/okzhanghy/daily_stock_analysis main
+          git push --force https://okzhang2022:$HF_TOKEN@huggingface.co/spaces/okzhanghy/daily_stock_analysis main:main
