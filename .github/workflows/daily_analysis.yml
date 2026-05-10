@@ -284,3 +284,11 @@ jobs:
 
       - name: 最终发布
         uses: actions/deploy-pages@v4
+
+      - name: Sync to Hugging Face
+        # 这一步一定要放在你“提交报告到 GitHub”的步骤之后
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          # 强行推送当前最新的代码和报告到 HF
+          git push --force https://okzhang2022:$HF_TOKEN@huggingface.co/spaces/okzhanghy/daily_stock_analysis main
