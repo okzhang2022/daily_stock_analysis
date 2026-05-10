@@ -294,4 +294,9 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           # 强行推送当前最新的代码和报告到 HF
-          git push --force https://okzhang2022:$HF_TOKEN@huggingface.co/spaces/okzhanghy/daily_stock_analysis main:main
+          # 先把 Git 变成一个“没有历史”的新起点
+          git checkout --orphan latest_branch
+          git add -A
+          git commit -am "Clean sync"
+          # 强行推这个“干净”的分支到 HF 的 main
+          git push --force https://okzhang2022:$HF_TOKEN@huggingface.co/spaces/okzhanghy/daily_stock_analysis latest_branch:main
