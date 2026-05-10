@@ -46,6 +46,9 @@ jobs:
       
       - name: 检出代码
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # <--- 关键是加这一行，让它抓取完整的历史记录
+          lfs: true
       
       - name: 设置 Python 环境
         uses: actions/setup-python@v6
