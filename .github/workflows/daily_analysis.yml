@@ -475,7 +475,7 @@ jobs:
           # 检查是否存在 reports 目录，不存在则创建
           mkdir -p reports
           # 找到最新的 md 文件并转为 index.html
-          LATEST_MD=$(ls -t reports/*.md | head -1)
+          LATEST_MD=$(ls -t reports/report_*.md | head -1)
           if [ -n "$LATEST_MD" ]; then
             echo "<html><head><meta charset='utf-8'><title>股票分析报告</title>
             <style>
