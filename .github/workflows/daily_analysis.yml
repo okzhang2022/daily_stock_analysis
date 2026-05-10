@@ -468,52 +468,43 @@ jobs:
             echo "📜 最近日志（最后 30 行）:"
             tail -30 logs/stock_analysis_*.log 2>/dev/null || echo "无日志"
           fi
+
+      - name: 生成并美化 HTML 网页
+        run: |
+          pip install markdown
+          # 检查是否存在 reports 目录，不存在则创建
+          mkdir -p reports
+          # 找到最新的 md 文件并转为 index.html
+          LATEST_MD=$(ls -t reports/*.md | head -1)
+          if [ -n "$LATEST_MD" ]; then
+            echo "<html><head><meta charset='utf-8'><title>股票分析报告</title>
+            <style>
+              body { font-family: sans-serif; line-height: 1.6; padding: 30px; max-width: 800px; margin: auto; background: #f4f7f6; color: #333; }
+              .card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+              h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+              th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+              th { background: #3498db; color: white; }
+              tr:nth-child(even) { background: #f9f9f9; }
+              strong { color: #e74c3c; }
+            </style>
+            </head><body><div class='card'>" > reports/index.html
+            
+            python -m markdown "$LATEST_MD" >> reports/index.html
+            
+            echo "</div></body></html>" >> reports/index.html
+          else
+            echo "<h1>暂无分析报告</h1>" > reports/index.html
+          fi
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
-
-      - name: Create Professional HTML Report
-        run: |
-          # 1. 安装转换工具
-          pip install markdown
-          
-          # 2. 进入报告目录并转换最新的 MD 文件
-          cd reports
-          LATEST_MD=$(ls -t *.md | head -1)
-          
-          # 3. 写入带样式的 HTML 模板
-          echo "<html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'>
-          <title>AI 股票分析报告</title>
-          <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; padding: 20px; max-width: 800px; margin: auto; background: #f9f9f9; color: #333; }
-            .container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-            h1 { color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 10px; }
-            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-            th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-            th { background-color: #f2f2f2; }
-            strong { color: #d32f2f; } /* 让加粗的文字（通常是价格或结论）显眼一点 */
-            .date { color: #666; text-align: right; font-size: 0.9em; }
-          </style>
-          </head><body><div class='container'>
-          <div class='date'>报告生成时间: $(date '+%Y-%m-%d %H:%M')</div>" > index.html
-          
-          # 4. 将 Markdown 内容转为 HTML 并拼接到 index.html
-          python -m markdown "$LATEST_MD" >> index.html
-          
-          echo "</div></body></html>" >> index.html
-          cd ..
 
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # 关键点：这里必须指向包含 index.html 的那个文件夹
+          # 重点：只保留这一个上传步骤，路径指向 reports
           path: './reports'
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          # 检查你的程序生成的文件夹到底是 reports 还是 output
-          # 从你上方日志看（456行），该项目生成的文件夹叫 reports
-          path: './reports' 
 
       - name: Deploy to GitHub Pages
         id: deployment
