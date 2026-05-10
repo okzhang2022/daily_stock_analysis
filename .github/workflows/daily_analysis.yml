@@ -477,6 +477,18 @@ jobs:
           # 检查你的程序生成的文件夹到底是 reports 还是 output
           # 从你上方日志看（456行），该项目生成的文件夹叫 reports
           path: './reports' 
+      - name: Convert Markdown to HTML
+        run: |
+          # 安装一个简单的转换工具
+          pip install markdown
+          # 创建一个简单的 HTML 模板，把 .md 内容塞进去
+          for f in reports/*.md; do
+            echo "<html><head><meta charset='utf-8'><style>body{font-family:sans-serif;padding:40px;line-height:1.6;max-width:800px;margin:auto;background:#f4f4f9;}</style></head><body>" > "${f%.md}.html"
+            python -m markdown "$f" >> "${f%.md}.html"
+            echo "</body></html>" >> "${f%.md}.html"
+          done
+          # 依然是那行：改名为 index.html 方便 Pages 读取
+          mv reports/report_*.html reports/index.html || echo "No report found"
 
       - name: Deploy to GitHub Pages
         id: deployment
