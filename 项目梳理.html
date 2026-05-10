@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>daily&lowbar;stock&lowbar;analysis &#x9879;&#x76ee;&#x68b3;&#x7406;</title>
+            <style>
+/* From extension vscode.github */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.vscode-dark img[src$=\#gh-light-mode-only],
+.vscode-light img[src$=\#gh-dark-mode-only],
+.vscode-high-contrast:not(.vscode-high-contrast-light) img[src$=\#gh-light-mode-only],
+.vscode-high-contrast-light img[src$=\#gh-dark-mode-only] {
+	display: none;
+}
+
+</style>
+            
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/markdown.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/highlight.css">
+<style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, 'Ubuntu', 'Droid Sans', sans-serif;
+                font-size: 14px;
+                line-height: 1.6;
+            }
+        </style>
+        <style>
+.task-list-item {
+    list-style-type: none;
+}
+
+.task-list-item-checkbox {
+    margin-left: -20px;
+    vertical-align: middle;
+    pointer-events: none;
+}
+</style>
+<style>
+:root {
+  --color-note: #0969da;
+  --color-tip: #1a7f37;
+  --color-warning: #9a6700;
+  --color-severe: #bc4c00;
+  --color-caution: #d1242f;
+  --color-important: #8250df;
+}
+
+</style>
+<style>
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-note: #2f81f7;
+    --color-tip: #3fb950;
+    --color-warning: #d29922;
+    --color-severe: #db6d28;
+    --color-caution: #f85149;
+    --color-important: #a371f7;
+  }
+}
+
+</style>
+<style>
+.markdown-alert {
+  padding: 0.5rem 1rem;
+  margin-bottom: 16px;
+  color: inherit;
+  border-left: .25em solid #888;
+}
+
+.markdown-alert>:first-child {
+  margin-top: 0
+}
+
+.markdown-alert>:last-child {
+  margin-bottom: 0
+}
+
+.markdown-alert .markdown-alert-title {
+  display: flex;
+  font-weight: 500;
+  align-items: center;
+  line-height: 1
+}
+
+.markdown-alert .markdown-alert-title .octicon {
+  margin-right: 0.5rem;
+  display: inline-block;
+  overflow: visible !important;
+  vertical-align: text-bottom;
+  fill: currentColor;
+}
+
+.markdown-alert.markdown-alert-note {
+  border-left-color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-note .markdown-alert-title {
+  color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-important {
+  border-left-color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-important .markdown-alert-title {
+  color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-warning {
+  border-left-color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-warning .markdown-alert-title {
+  color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-tip {
+  border-left-color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-tip .markdown-alert-title {
+  color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-caution {
+  border-left-color: var(--color-caution);
+}
+
+.markdown-alert.markdown-alert-caution .markdown-alert-title {
+  color: var(--color-caution);
+}
+
+</style>
+        
+        </head>
+        <body class="vscode-body vscode-light">
+            <h1 id="daily_stock_analysis-项目梳理">daily_stock_analysis 项目梳理</h1>
+<h2 id="1-这个项目是做什么的">1. 这个项目是做什么的</h2>
+<p>这是一个面向 <strong>A 股 / 港股 / 美股</strong> 的“自选股智能分析系统”。它把「行情数据 + 技术指标 + 多维度情报（新闻/风险/事件等）+ LLM 归纳」串成一条可自动化的流水线，最终产出可读、可运营的 <strong>决策仪表盘式报告</strong>，并支持多渠道推送、API/Web 交互、Bot 触达与（可选）桌面端承载。</p>
+<p>常见使用场景：</p>
+<ul>
+<li>每日/每次运行：批量分析一组股票并生成汇总报告（<code>reports/report_YYYYMMDD.md</code>）</li>
+<li>盘后复盘：按市场生成“大盘复盘”（<code>reports/market_review_YYYYMMDD.md</code>）</li>
+<li>Web/API：通过 FastAPI 提供分析、历史、组合等接口，WebUI 展示与触发</li>
+<li>Bot：通过命令触发分析/复盘/查询</li>
+</ul>
+<p>关键入口：</p>
+<ul>
+<li>CLI/调度入口：[<a href="http://main.py">main.py</a>](file:///Users/didi/Documents/didi/github/daily_stock_analysis/main.py)</li>
+<li>API 服务入口：[<a href="http://server.py">server.py</a>](file:///Users/didi/Documents/didi/github/daily_stock_analysis/server.py)</li>
+</ul>
+<h2 id="2-目标是什么">2. 目标是什么</h2>
+<p>面向“可用的交易辅助”而不是“单点分析 demo”，目标可概括为：</p>
+<ul>
+<li><strong>自动化</strong>：减少手工查价/翻新闻/做笔记的成本，支持定时任务与批量处理</li>
+<li><strong>多市场</strong>：同一套流程兼容 cn/hk/us，尽量减少硬编码与市场耦合</li>
+<li><strong>稳定可运行</strong>：外部数据源不稳定时可降级；单股失败不拖垮全局；推送失败不影响主流程</li>
+<li><strong>可交互可集成</strong>：CLI、API/Web、Bot 等多入口复用同一核心能力</li>
+<li><strong>输出可行动</strong>：报告结构偏“决策仪表盘”，强调结论、风险、观察点与条件化计划</li>
+</ul>
+<h2 id="3-整体架构长什么样">3. 整体架构长什么样</h2>
+<p>可以把它理解成“多入口 + 单核心流水线 + 多适配器”的结构。</p>
+<h3 id="31-入口层cli--api--bot--定时">3.1 入口层（CLI / API / Bot / 定时）</h3>
+<ul>
+<li>CLI/定时编排：[<a href="http://main.py">main.py</a>](file:///Users/didi/Documents/didi/github/daily_stock_analysis/main.py)
+<ul>
+<li>负责参数解析、运行模式切换、是否合并推送、是否执行大盘复盘等</li>
+</ul>
+</li>
+<li>FastAPI 服务： [<a href="http://server.py">server.py</a>](file:///Users/didi/Documents/didi/github/daily_stock_analysis/server.py) + [api/app.py](file:///Users/didi/Documents/didi/github/daily_stock_analysis/api/app.py)
+<ul>
+<li>提供分析、历史、组合、系统配置等 HTTP API</li>
+</ul>
+</li>
+<li>Bot 接入： [bot/](file:///Users/didi/Documents/didi/github/daily_stock_analysis/bot/)
+<ul>
+<li>负责消息平台适配、命令解析与转调服务/流水线</li>
+</ul>
+</li>
+</ul>
+<h3 id="32-核心编排层core-pipeline">3.2 核心编排层（Core Pipeline）</h3>
+<p>核心是 <code>StockAnalysisPipeline</code>：批量并发处理、异常隔离、汇总报表与通知。</p>
+<ul>
+<li>位置：[src/core/pipeline.py](file:///Users/didi/Documents/didi/github/daily_stock_analysis/src/core/pipeline.py)</li>
+<li>职责要点：
+<ul>
+<li>批量股票并发分析（线程池）</li>
+<li>拉取行情/筹码/技术指标等上下文</li>
+<li>调用搜索服务补齐情报</li>
+<li>构建 LLM Prompt，解析/归一化结构化结果</li>
+<li>落库/保存报告文件/多渠道推送</li>
+</ul>
+</li>
+</ul>
+<p>与之并列的大盘复盘链路：</p>
+<ul>
+<li>复盘编排：[src/core/market_review.py](file:///Users/didi/Documents/didi/github/daily_stock_analysis/src/core/market_review.py)</li>
+<li>复盘分析与 Prompt 生成：[src/market_analyzer.py](file:///Users/didi/Documents/didi/github/daily_stock_analysis/src/market_analyzer.py)</li>
+<li>复盘策略蓝图（按市场区域）：[src/core/market_strategy.py](file:///Users/didi/Documents/didi/github/daily_stock_analysis/src/core/market_strategy.py)</li>
+</ul>
+<h3 id="33-服务层services">3.3 服务层（Services）</h3>
+<p>面向 API/Web 的业务封装与任务控制，通常负责把外部请求转换为内部能力调用：</p>
+<ul>
+<li>分析服务：[src/services/analysis_service.py](file:///Users/didi/Documents/didi/github/daily_stock_analysis/src/services/analysis_service.py)</li>
+<li>任务队列/任务状态：[src/services/task_queue.py](file:///Users/didi/Documents/didi/github/daily_stock_analysis/src/services/task_queue.py)</li>
+<li>系统配置服务：[src/services/system_config_service.py](file:///Users/didi/Documents/didi/github/daily_stock_analysis/src/services/system_config_service.py)</li>
+</ul>
+<h3 id="34-数据与外部适配层data-provider--search--notification">3.4 数据与外部适配层（Data Provider / Search / Notification）</h3>
+<ul>
+<li>行情/数据源适配与降级：<code>data_provider/</code>
+<ul>
+<li>统一抓取入口与策略：[data_provider/base.py](file:///Users/didi/Documents/didi/github/daily_stock_analysis/data_provider/base.py)</li>
+<li>数据源与工具集合：[data_provider/](file:///Users/didi/Documents/didi/github/daily_stock_analysis/data_provider/)</li>
+</ul>
+</li>
+<li>情报搜索聚合： [src/search_service.py](file:///Users/didi/Documents/didi/github/daily_stock_analysis/src/search_service.py)</li>
+<li>通知与推送： [src/notification.py](file:///Users/didi/Documents/didi/github/daily_stock_analysis/src/notification.py) + [src/notification_sender/](file:///Users/didi/Documents/didi/github/daily_stock_analysis/src/notification_sender/)
+<ul>
+<li>支持多渠道、Markdown→图片等降级策略</li>
+</ul>
+</li>
+</ul>
+<h3 id="35-存储层sqlite--repositories">3.5 存储层（SQLite / Repositories）</h3>
+<p>本地持久化用于历史追踪、断点续跑与结果回溯：</p>
+<ul>
+<li>SQLite/ORM/存储胶水层：[src/storage.py](file:///Users/didi/Documents/didi/github/daily_stock_analysis/src/storage.py)</li>
+<li>仓储层（业务数据访问）：[src/repositories/](file:///Users/didi/Documents/didi/github/daily_stock_analysis/src/repositories/)</li>
+</ul>
+<h3 id="36-前端与桌面端">3.6 前端与桌面端</h3>
+<ul>
+<li>Web 前端（工作台）：[apps/dsa-web/](file:///Users/didi/Documents/didi/github/daily_stock_analysis/apps/dsa-web/)</li>
+<li>桌面端（Electron 容器）：[apps/dsa-desktop/](file:///Users/didi/Documents/didi/github/daily_stock_analysis/apps/dsa-desktop/)</li>
+</ul>
+<h2 id="4-核心流程从触发到报告推送">4. 核心流程（从触发到报告/推送）</h2>
+<h3 id="41-个股批量分析报告report_yyyymmddmd">4.1 个股批量分析（报告：report_YYYYMMDD.md）</h3>
+<p>典型路径：</p>
+<ul>
+<li><code>main.py</code> 解析股票列表/运行模式 → 创建 <code>StockAnalysisPipeline</code></li>
+<li><code>StockAnalysisPipeline</code> 批量并发执行：
+<ul>
+<li>数据抓取（多数据源 + fallback）</li>
+<li>情报搜索（新闻/风险/事件）</li>
+<li>LLM 分析（结构化“仪表盘”）</li>
+<li>保存报告文件 +（可选）推送通知</li>
+</ul>
+</li>
+</ul>
+<p>对应核心实现：</p>
+<ul>
+<li>编排入口：[<a href="http://main.py">main.py</a>](file:///Users/didi/Documents/didi/github/daily_stock_analysis/main.py)</li>
+<li>流水线实现：[src/core/pipeline.py](file:///Users/didi/Documents/didi/github/daily_stock_analysis/src/core/pipeline.py)</li>
+<li>报告生成与落盘：通知层的 <code>save_report_to_file</code>：[src/notification.py](file:///Users/didi/Documents/didi/github/daily_stock_analysis/src/notification.py#L1722-L1753)</li>
+</ul>
+<h3 id="42-大盘复盘报告market_review_yyyymmddmd">4.2 大盘复盘（报告：market_review_YYYYMMDD.md）</h3>
+<p>复盘与个股分析是独立链路，按配置决定市场区域（<code>MARKET_REVIEW_REGION</code>）。</p>
+<ul>
+<li>复盘编排：[src/core/market_review.py](file:///Users/didi/Documents/didi/github/daily_stock_analysis/src/core/market_review.py)</li>
+<li>复盘 Prompt 与生成：[src/market_analyzer.py](file:///Users/didi/Documents/didi/github/daily_stock_analysis/src/market_analyzer.py)</li>
+</ul>
+<h3 id="43-多入口复用同一核心">4.3 多入口复用同一核心</h3>
+<p>项目的一个关键点是：CLI / API / Bot 看似入口不同，但尽量复用同一套核心能力（流水线 + 服务层），降低“多入口导致多套实现发散”的维护成本。</p>
+<h2 id="5-设计理念与取舍">5. 设计理念与取舍</h2>
+<p>从实现和目录边界可以归纳为以下几条“默认价值观”：</p>
+<ul>
+<li><strong>稳定性优先</strong>：外部数据源与搜索是高不确定性依赖，系统倾向“可降级继续产出”，而不是 fail-fast</li>
+<li><strong>异常隔离</strong>：单股失败不影响其他股票；通知/落盘失败不影响分析结果产出</li>
+<li><strong>配置驱动</strong>：市场区域、是否启用复盘、交易日过滤、推送渠道等通过配置控制，支持不同部署形态</li>
+<li><strong>输出结构化</strong>：以“决策仪表盘”的结构组织结论，便于前端展示、推送裁剪、后续扩展为 API Schema</li>
+<li><strong>分层复用</strong>：入口层薄、核心编排集中、外部能力通过适配器封装，尽量避免跨层耦合</li>
+</ul>
+<h2 id="6-目录索引快速导航">6. 目录索引（快速导航）</h2>
+<ul>
+<li><code>src/core/</code>：主流程编排与关键策略（pipeline、market review、trading calendar 等）</li>
+<li><code>src/services/</code>：业务服务层（API/Web 调用入口、任务队列等）</li>
+<li><code>src/repositories/</code>、<code>src/storage.py</code>：数据访问与持久化</li>
+<li><code>data_provider/</code>：行情/数据源适配与降级策略</li>
+<li><code>api/</code>：FastAPI 路由与中间件</li>
+<li><code>bot/</code>：机器人接入（命令与平台适配）</li>
+<li><code>apps/dsa-web/</code>：Web 前端工作台</li>
+<li><code>apps/dsa-desktop/</code>：Electron 桌面端容器</li>
+</ul>
+<h2 id="7-一句话总结">7. 一句话总结</h2>
+<p>这是一个“把多市场股票分析做成可持续跑、可多端触达、可降级容错”的系统：入口多样，但核心围绕同一条流水线产出统一格式的决策报告，并通过存储与通知形成闭环。</p>
+
+            
+            
+        </body>
+        </html>

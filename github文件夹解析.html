@@ -1,0 +1,615 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>.github 文件夹解析（daily_stock_analysis）</title>
+    <style>
+        :root {
+            --bg: #0b1020;
+            --panel: #121a33;
+            --text: #e8ecff;
+            --muted: #aab3de;
+            --line: #2a3566;
+            --accent: #7aa2ff;
+            --ok: #6ee7b7;
+            --warn: #fbbf24;
+            --danger: #fb7185;
+            --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+        }
+
+        body {
+            margin: 0;
+            font-family: var(--sans);
+            background: radial-gradient(1200px 700px at 15% 10%, #1a2450 0%, var(--bg) 55%) fixed;
+            color: var(--text);
+        }
+
+        .wrap {
+            max-width: 1120px;
+            margin: 0 auto;
+            padding: 28px 18px 46px;
+        }
+
+        h1 {
+            font-size: 22px;
+            margin: 0 0 8px 0;
+            letter-spacing: .2px;
+        }
+
+        .sub {
+            color: var(--muted);
+            margin: 0 0 16px 0;
+            line-height: 1.6;
+        }
+
+        .chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 10px 0 18px;
+        }
+
+        .chip {
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, .04);
+            padding: 6px 10px;
+            border-radius: 999px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .card {
+            background: rgba(18, 26, 51, .75);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, .25);
+        }
+
+        .card+.card {
+            margin-top: 14px;
+        }
+
+        .card h2 {
+            font-size: 16px;
+            margin: 0;
+            padding: 14px 14px 0;
+            color: var(--text);
+        }
+
+        .card .body {
+            padding: 12px 14px 14px;
+            color: var(--muted);
+            line-height: 1.65;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            overflow: hidden;
+            border-radius: 12px;
+            border: 1px solid var(--line);
+        }
+
+        .table th,
+        .table td {
+            padding: 10px 10px;
+            vertical-align: top;
+            border-bottom: 1px solid rgba(42, 53, 102, .55);
+        }
+
+        .table th {
+            text-align: left;
+            color: var(--text);
+            background: rgba(255, 255, 255, .03);
+            font-size: 13px;
+        }
+
+        .table td {
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .k {
+            font-family: var(--mono);
+            color: var(--text);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            font-size: 12px;
+            color: var(--muted);
+            background: rgba(255, 255, 255, .03);
+        }
+
+        .badge.ok {
+            border-color: rgba(110, 231, 183, .55);
+            background: rgba(110, 231, 183, .12);
+            color: rgba(232, 236, 255, .9);
+        }
+
+        .badge.warn {
+            border-color: rgba(251, 191, 36, .55);
+            background: rgba(251, 191, 36, .12);
+            color: rgba(232, 236, 255, .9);
+        }
+
+        .badge.danger {
+            border-color: rgba(251, 113, 133, .55);
+            background: rgba(251, 113, 133, .12);
+            color: rgba(232, 236, 255, .9);
+        }
+
+        details {
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, .03);
+            padding: 10px 12px;
+            margin-top: 10px;
+        }
+
+        summary {
+            cursor: pointer;
+            color: var(--text);
+            font-weight: 650;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .mini {
+            margin: 8px 0 0 0;
+            color: var(--muted);
+            line-height: 1.7;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 900px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .callout {
+            border: 1px solid var(--line);
+            border-left: 4px solid rgba(122, 162, 255, .75);
+            background: rgba(122, 162, 255, .07);
+            border-radius: 12px;
+            padding: 10px 12px;
+            color: var(--muted);
+        }
+
+        .callout b {
+            color: var(--text);
+        }
+
+        .callout.warn {
+            border-left-color: rgba(251, 191, 36, .85);
+            background: rgba(251, 191, 36, .07);
+        }
+
+        .callout.danger {
+            border-left-color: rgba(251, 113, 133, .85);
+            background: rgba(251, 113, 133, .07);
+        }
+
+        .kv {
+            display: grid;
+            grid-template-columns: 130px 1fr;
+            gap: 8px 14px;
+            margin-top: 8px;
+        }
+
+        .kv div {
+            padding: 2px 0;
+        }
+
+        .kv .key {
+            color: rgba(232, 236, 255, .85);
+            font-family: var(--mono);
+            font-size: 12px;
+        }
+
+        .kv .val {
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .footer {
+            margin-top: 14px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <h1>.github 文件夹解析</h1>
+        <p class="sub">
+            这份文件专门解释 <span class="k">.github/</span> 目录：它主要承载 <b>CI/CD 工作流</b>、<b>Issue/PR 模板</b>、<b>仓库治理指令</b> 与
+            <b>自动化脚本</b>。
+        </p>
+        <div class="chips">
+            <span class="chip">入口：.github/workflows/*.yml</span>
+            <span class="chip">PR 审查：.github/workflows/pr-review.yml + .github/scripts/ai_review.py</span>
+            <span class="chip">发布：tag → release / docker / desktop</span>
+            <span class="chip">治理：instructions + copilot-instructions</span>
+        </div>
+
+        <div class="card">
+            <h2>总览：.github 下有什么</h2>
+            <div class="body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th style="width: 260px;">路径</th>
+                            <th>作用</th>
+                            <th style="width: 360px;">关键点</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="k">.github/workflows/</span></td>
+                            <td>GitHub Actions 工作流：CI、每日任务、发布、Docker 构建、PR 自动审查、清理 stale 等。</td>
+                            <td>是最核心的自动化入口；每个 yml 文件是一条独立流水线。</td>
+                        </tr>
+                        <tr>
+                            <td><span class="k">.github/scripts/</span></td>
+                            <td>工作流用的脚本（主要是 PR AI 审查）。</td>
+                            <td><span class="k">ai_review.py</span> 会被 PR Review 工作流调用，收集 diff + PR 描述后调用 LLM。</td>
+                        </tr>
+                        <tr>
+                            <td><span class="k">.github/instructions/</span></td>
+                            <td>Copilot/Coding Agent 的路径级指令（backend/client/governance）。</td>
+                            <td>用 <span class="k">applyTo</span> 指定哪些路径受哪些规则约束，规则与仓库 <span class="k">AGENTS.md</span>
+                                对齐。</td>
+                        </tr>
+                        <tr>
+                            <td><span class="k">.github/ISSUE_TEMPLATE/</span></td>
+                            <td>Issue 模板：Bug/Feature 等，统一收集复现信息与环境。</td>
+                            <td>引导用户贴 commit hash、运行方式、关键配置与日志，减少来回沟通。</td>
+                        </tr>
+                        <tr>
+                            <td><span class="k">.github/PULL_REQUEST_TEMPLATE.md</span></td>
+                            <td>PR 模板：类型、背景、范围、验证、风险、回滚等字段。</td>
+                            <td>强调“给出实际跑过的验证命令”，并对 prompt 变更（EXTRACT_PROMPT）做了特殊要求。</td>
+                        </tr>
+                        <tr>
+                            <td><span class="k">.github/CODEOWNERS</span></td>
+                            <td>代码所有者：指定默认审阅者/负责人。</td>
+                            <td>当前为全仓库默认 owner。</td>
+                        </tr>
+                        <tr>
+                            <td><span class="k">.github/copilot-instructions.md</span></td>
+                            <td>Copilot 仓库指令汇总（镜像 AGENTS.md）。</td>
+                            <td>明确“以 AGENTS.md 为真源”，并列出目录边界、验证矩阵与治理规则。</td>
+                        </tr>
+                        <tr>
+                            <td><span class="k">.github/release.yml</span></td>
+                            <td>GitHub Release notes 分类规则（changelog categories）。</td>
+                            <td>用 label 将 PR 自动归类到 New Features / Bug Fixes / Docs 等类别。</td>
+                        </tr>
+                        <tr>
+                            <td><span class="k">.github/FUNDING.yml</span></td>
+                            <td>赞助入口配置。</td>
+                            <td>指向 README 的 sponsor 段落。</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>.github/instructions：三类指令分别约束什么</h2>
+            <div class="body">
+                <div class="grid">
+                    <div class="callout">
+                        <b>backend.instructions.md</b><br />
+                        适用：<span class="k">main.py/server.py/src/**/data_provider/**/api/**/bot/**/tests/**</span><br />
+                        重点：保持流水线边界、配置变更要评估多端影响、data_provider 改动必须保留 fallback/降级语义、优先跑 <span
+                            class="k">./scripts/ci_gate.sh</span>。
+                    </div>
+                    <div class="callout">
+                        <b>client.instructions.md</b><br />
+                        适用：<span class="k">apps/dsa-web/**</span>、<span class="k">apps/dsa-desktop/**</span>
+                        及相关脚本/桌面文档<br />
+                        重点：保持 Vite+React 与 Electron 既有结构；API 字段/认证/渲染改动要评估 Web+Desktop；前端要跑 lint+build。
+                    </div>
+                    <div class="callout">
+                        <b>governance.instructions.md</b><br />
+                        适用：<span class="k">README/docs/.github/scripts/docker</span> 等治理与发布路径<br />
+                        重点：AGENTS.md 真源、避免权限扩大/密钥暴露、保持 auto-tag 只在 <span class="k">#patch/#minor/#major</span> 时触发。
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>.github/scripts：自动审查脚本做什么</h2>
+            <div class="body">
+                <div class="callout">
+                    <b>ai_review.py</b>：被 <span class="k">PR Review</span> 工作流调用。它会：
+                    <div class="kv">
+                        <div class="key">筛选范围</div>
+                        <div class="val">只审查特定路径（py/md/docs/workflows/web 等），避免把不相关 diff 喂给模型。</div>
+                        <div class="key">diff 收集</div>
+                        <div class="val">对 base 分支做 diff，超长会截断（<span class="k">MAX_DIFF_LENGTH</span>）。</div>
+                        <div class="key">提示词</div>
+                        <div class="val">按 <span class="k">AGENTS.md</span> 的审查维度输出：必要性/关联性/类型/描述完整性/风险/必改项/建议项。</div>
+                        <div class="key">模型调用</div>
+                        <div class="val">优先 Gemini（依赖 <span class="k">GEMINI_API_KEY</span> 等环境变量）。</div>
+                    </div>
+                </div>
+                <div class="callout warn" style="margin-top:10px;">
+                    <b>注意</b>：该脚本用于“评论式审查”，不是阻断 CI 的 gate；真正阻断类检查主要在 <span class="k">CI</span> 工作流（ci.yml）里完成。
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>.github/workflows：每个工作流文件做什么</h2>
+            <div class="body">
+                这里按文件逐个解释“触发条件 / 主要工作 / 产物”。你可以把它理解成一组互不相同的流水线：有的面向 PR，有的面向每日运行，有的面向发布与打包。
+
+                <details>
+                    <summary>
+                        <span><span class="k">ci.yml</span> — PR CI Gate</span>
+                        <span class="badge ok">pull_request</span>
+                    </summary>
+                    <div class="mini">
+                        <div class="kv">
+                            <div class="key">触发</div>
+                            <div class="val">PR 提交到 <span class="k">main</span>（pull_request）。</div>
+                            <div class="key">目标</div>
+                            <div class="val">保证后端、Docker、（可选）前端改动的基础质量与可构建性。</div>
+                            <div class="key">关键 job</div>
+                            <div class="val">
+                                <span class="k">ai-governance</span>（校验 AI 协作资产），<span
+                                    class="k">backend-gate</span>（syntax/flake8/deterministic/offline-tests），<span
+                                    class="k">docker-build</span>（构建镜像+import smoke），<span
+                                    class="k">web-gate</span>（仅当前端路径变更时运行）。
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <details>
+                    <summary>
+                        <span><span class="k">pr-review.yml</span> — PR 自动审查（静态 + AI + 自动评论/打标签）</span>
+                        <span class="badge warn">pull_request_target</span>
+                    </summary>
+                    <div class="mini">
+                        <div class="kv">
+                            <div class="key">触发</div>
+                            <div class="val">pull_request_target（opened/synchronize/reopened），并限定一组路径；也支持
+                                workflow_dispatch。</div>
+                            <div class="key">做什么</div>
+                            <div class="val">
+                                1) 安全检查（是否改了 workflow/scripts 等敏感文件）→ 2) 静态检查（py_compile + flake8 严重错误）→
+                                3) AI 审查（调用 <span class="k">.github/scripts/ai_review.py</span>）→ 4) 自动打标签 → 5) 汇总评论到
+                                PR。
+                            </div>
+                            <div class="key">权限</div>
+                            <div class="val">需要对 PR/Issue 写权限以评论与打标签。</div>
+                        </div>
+                        <div class="callout danger" style="margin-top:10px;">
+                            <b>为什么用 pull_request_target？</b> 为了让工作流在 fork PR 也能拿到写评论/打标签权限。风险点是“执行 PR
+                            代码时可能有安全隐患”，该工作流通过先检出主分支脚本、再检出 PR 代码并限制路径/步骤来降低风险，但对修改 workflow 的 PR 仍建议人工重点复核。
+                        </div>
+                    </div>
+                </details>
+
+                <details>
+                    <summary>
+                        <span><span class="k">daily_analysis.yml</span> — 每日股票分析（定时 + 手动）</span>
+                        <span class="badge ok">schedule</span>
+                    </summary>
+                    <div class="mini">
+                        <div class="kv">
+                            <div class="key">触发</div>
+                            <div class="val">工作日定时（UTC 10:00 = 北京 18:00）+ workflow_dispatch。</div>
+                            <div class="key">模式</div>
+                            <div class="val">
+                                <span class="k">full</span>（股票+大盘）、<span class="k">market-only</span>（仅大盘复盘：<span
+                                    class="k">python main.py --market-review</span>）、
+                                <span class="k">stocks-only</span>（仅个股：<span class="k">python main.py
+                                    --no-market-review</span>）。
+                            </div>
+                            <div class="key">产物</div>
+                            <div class="val">上传 <span class="k">reports/</span> 与 <span class="k">logs/</span> 为
+                                artifact，并把最新报告 md 转成 <span class="k">reports/index.html</span> 发布到 GitHub Pages。</div>
+                            <div class="key">依赖</div>
+                            <div class="val">大量从 GitHub Secrets/Vars 注入 LLM
+                                与数据源配置（Gemini/OpenAI/LiteLLM/Longbridge/Tushare 等）。</div>
+                        </div>
+                    </div>
+                </details>
+
+                <details>
+                    <summary>
+                        <span><span class="k">network-smoke.yml</span> — 网络相关冒烟（非阻断）</span>
+                        <span class="badge ok">schedule</span>
+                    </summary>
+                    <div class="mini">
+                        <div class="kv">
+                            <div class="key">触发</div>
+                            <div class="val">工作日定时（UTC 2:00）+ 手动触发。</div>
+                            <div class="key">做什么</div>
+                            <div class="val">运行 <span class="k">pytest -m network</span> 与 <span
+                                    class="k">./scripts/test.sh quick</span>，都设置为 continue-on-error，不阻断。</div>
+                            <div class="key">产物</div>
+                            <div class="val">上传 network smoke 的日志 artifact，方便排查网络与外部依赖波动。</div>
+                        </div>
+                    </div>
+                </details>
+
+                <details>
+                    <summary>
+                        <span><span class="k">auto-tag.yml</span> — 自动打版本 Tag（opt-in）</span>
+                        <span class="badge ok">push main</span>
+                    </summary>
+                    <div class="mini">
+                        <div class="kv">
+                            <div class="key">触发</div>
+                            <div class="val">push 到 main（忽略 docs/md/.github 等路径）。</div>
+                            <div class="key">策略</div>
+                            <div class="val">默认不打 tag；只有 commit message 含 <span class="k">#patch</span>/<span
+                                    class="k">#minor</span>/<span class="k">#major</span> 才会触发。</div>
+                            <div class="key">实现</div>
+                            <div class="val">使用 <span class="k">anothrNick/github-tag-action</span> 自动 bump 并 push tag。
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <details>
+                    <summary>
+                        <span><span class="k">create-release.yml</span> — 从 Tag 创建 GitHub Release</span>
+                        <span class="badge ok">push tag</span>
+                    </summary>
+                    <div class="mini">
+                        <div class="kv">
+                            <div class="key">触发</div>
+                            <div class="val">push annotated tag：<span class="k">v*.*.*</span>。</div>
+                            <div class="key">关键点</div>
+                            <div class="val">读取 tag 的 annotation 内容作为 release body（如果为空则用默认文案）。</div>
+                            <div class="key">实现</div>
+                            <div class="val">使用 <span class="k">softprops/action-gh-release</span> 创建 Release。</div>
+                        </div>
+                    </div>
+                </details>
+
+                <details>
+                    <summary>
+                        <span><span class="k">desktop-release.yml</span> — 桌面端打包与发布（Windows/macOS）</span>
+                        <span class="badge ok">push tag / manual</span>
+                    </summary>
+                    <div class="mini">
+                        <div class="kv">
+                            <div class="key">触发</div>
+                            <div class="val">push tag（vX.Y.Z）或手动输入 release_tag。</div>
+                            <div class="key">构建矩阵</div>
+                            <div class="val">Windows installer + macOS x64/arm64 dmg（分别在对应 runner 上打包）。</div>
+                            <div class="key">产物</div>
+                            <div class="val">上传安装包/免安装 zip/dmg，再汇总发布到 GitHub Release。</div>
+                            <div class="key">说明</div>
+                            <div class="val">发布正文优先从 <span class="k">docs/CHANGELOG.md</span> 中提取对应版本段落。</div>
+                        </div>
+                    </div>
+                </details>
+
+                <details>
+                    <summary>
+                        <span><span class="k">docker-publish.yml</span> — Docker Release Publish（随 tag 发布）</span>
+                        <span class="badge ok">push tag / manual</span>
+                    </summary>
+                    <div class="mini">
+                        <div class="kv">
+                            <div class="key">触发</div>
+                            <div class="val">push tag（vX.Y.Z）或手动输入 release_tag。</div>
+                            <div class="key">前置 gate</div>
+                            <div class="val">发布前会跑 <span class="k">./scripts/ci_gate.sh</span>，并要求 tag 必须是
+                                annotated（annotation 不为空）。</div>
+                            <div class="key">发布目标</div>
+                            <div class="val">推送多架构镜像到 GHCR；若配置 DockerHub token/username，也同步推到 Docker Hub。</div>
+                        </div>
+                    </div>
+                </details>
+
+                <details>
+                    <summary>
+                        <span><span class="k">ghcr-dockerhub.yml</span> — Docker Manual Publish（完全手动）</span>
+                        <span class="badge warn">manual only</span>
+                    </summary>
+                    <div class="mini">
+                        <div class="kv">
+                            <div class="key">触发</div>
+                            <div class="val">仅 workflow_dispatch，输入 <span class="k">image_tag</span>。</div>
+                            <div class="key">用途</div>
+                            <div class="val">不依赖 tag 事件，适合临时补发镜像或回滚镜像 tag。</div>
+                            <div class="key">发布</div>
+                            <div class="val">GHCR + Docker Hub 都会推送，带 pre-publish smoke。</div>
+                        </div>
+                    </div>
+                </details>
+
+                <details>
+                    <summary>
+                        <span><span class="k">stale.yml</span> — 自动标记/关闭长期无活动的 Issue/PR</span>
+                        <span class="badge ok">schedule</span>
+                    </summary>
+                    <div class="mini">
+                        <div class="kv">
+                            <div class="key">触发</div>
+                            <div class="val">每日 UTC 0:00 + 手动触发。</div>
+                            <div class="key">规则</div>
+                            <div class="val">Issue 7 天无活动标 stale，再 7 天关闭；PR 21 天标 stale，再 14 天关闭；排除 pinned/security
+                                等标签与草稿 PR。</div>
+                            <div class="key">实现</div>
+                            <div class="val">actions/stale。</div>
+                        </div>
+                    </div>
+                </details>
+
+                <div class="footer">
+                    读法建议：先看 <span class="k">ci.yml</span>（合入质量门），再看 <span
+                        class="k">daily_analysis.yml</span>（真实运行路径），最后看发布链路（auto-tag → create-release / docker-publish /
+                    desktop-release）。
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>你最可能会用到的定位入口</h2>
+            <div class="body">
+                <div class="grid">
+                    <div class="callout">
+                        <b>想知道“PR 合入前会跑什么”</b><br />
+                        先看 <span class="k">.github/workflows/ci.yml</span>（阻断 CI）与 <span
+                            class="k">.github/workflows/pr-review.yml</span>（自动审查/评论）。
+                    </div>
+                    <div class="callout">
+                        <b>想知道“每天自动跑分析到底怎么跑的”</b><br />
+                        看 <span class="k">.github/workflows/daily_analysis.yml</span>，里面明确了 full/market-only/stocks-only
+                        三种运行命令以及 Pages 发布。
+                    </div>
+                    <div class="callout">
+                        <b>想知道“发版会发生什么”</b><br />
+                        tag 流：<span class="k">auto-tag.yml</span>（可选）→ <span
+                            class="k">create-release.yml</span>（Release）→ <span class="k">docker-publish.yml</span> /
+                        <span class="k">desktop-release.yml</span>（产物发布）。
+                    </div>
+                    <div class="callout warn">
+                        <b>改 workflow 的注意事项</b><br />
+                        workflow 本身属于“敏感变更”，PR Review 会提示重点人工复核；同时要避免扩大权限、避免泄露 secrets，并确保仍符合仓库的 opt-in tag 策略。
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

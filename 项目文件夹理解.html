@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>daily_stock_analysis：项目文件夹理解</title>
+    <style>
+      :root{
+        --bg:#0b1020;
+        --panel:#121a33;
+        --text:#e8ecff;
+        --muted:#aab3de;
+        --line:#2a3566;
+        --accent:#7aa2ff;
+        --accent2:#6ee7b7;
+        --warn:#fbbf24;
+        --danger:#fb7185;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      }
+      body{
+        margin:0;
+        font-family: var(--sans);
+        background: radial-gradient(1200px 700px at 15% 10%, #1a2450 0%, var(--bg) 55%) fixed;
+        color: var(--text);
+      }
+      .wrap{
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 28px 18px 42px;
+      }
+      h1{
+        font-size: 22px;
+        margin: 0 0 8px 0;
+        letter-spacing: .2px;
+      }
+      .sub{
+        color: var(--muted);
+        margin: 0 0 18px 0;
+        line-height: 1.5;
+      }
+      .chips{
+        display:flex;
+        flex-wrap:wrap;
+        gap:8px;
+        margin: 10px 0 18px;
+      }
+      .chip{
+        border: 1px solid var(--line);
+        background: rgba(255,255,255,.04);
+        padding: 6px 10px;
+        border-radius: 999px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .card{
+        background: rgba(18, 26, 51, .75);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        box-shadow: 0 12px 30px rgba(0,0,0,.25);
+      }
+      .card + .card{ margin-top: 14px; }
+      .card h2{
+        font-size: 16px;
+        margin: 0;
+        padding: 14px 14px 0;
+        color: var(--text);
+      }
+      .card .body{
+        padding: 12px 14px 14px;
+        color: var(--muted);
+        line-height: 1.65;
+      }
+      .legend{
+        display:flex;
+        flex-wrap:wrap;
+        gap:10px;
+        align-items:center;
+        margin-top: 8px;
+      }
+      .legend-item{
+        display:flex;
+        align-items:center;
+        gap:8px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .swatch{
+        width: 16px;
+        height: 10px;
+        border-radius: 3px;
+        border: 1px solid var(--line);
+      }
+      .swatch.accent{ background: rgba(122,162,255,.20); border-color: rgba(122,162,255,.55); }
+      .swatch.accent2{ background: rgba(110,231,183,.18); border-color: rgba(110,231,183,.55); }
+      .swatch.warn{ background: rgba(251,191,36,.18); border-color: rgba(251,191,36,.55); }
+      .swatch.danger{ background: rgba(251,113,133,.18); border-color: rgba(251,113,133,.55); }
+      .table{
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+        overflow: hidden;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+      }
+      .table th, .table td{
+        padding: 10px 10px;
+        vertical-align: top;
+        border-bottom: 1px solid rgba(42,53,102,.55);
+      }
+      .table th{
+        text-align:left;
+        color: var(--text);
+        background: rgba(255,255,255,.03);
+        font-size: 13px;
+      }
+      .table td{
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .k{
+        font-family: var(--mono);
+        color: var(--text);
+      }
+      details{
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: rgba(255,255,255,.03);
+        padding: 10px 12px;
+        margin-top: 10px;
+      }
+      summary{
+        cursor: pointer;
+        color: var(--text);
+        font-weight: 600;
+      }
+      .mini{
+        margin: 8px 0 0 0;
+        color: var(--muted);
+      }
+      .note{
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 10px;
+      }
+      a{ color: var(--accent); text-decoration: none; }
+      a:hover{ text-decoration: underline; }
+      .svg-wrap{
+        padding: 14px;
+      }
+      svg{
+        width: 100%;
+        height: auto;
+        display: block;
+      }
+      .box-title{
+        font-family: var(--sans);
+        font-size: 12px;
+        fill: var(--text);
+      }
+      .box-sub{
+        font-family: var(--sans);
+        font-size: 11px;
+        fill: rgba(232,236,255,.78);
+      }
+      .box-path{
+        font-family: var(--mono);
+        font-size: 11px;
+        fill: rgba(232,236,255,.82);
+      }
+      .footer{
+        margin-top: 14px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>daily_stock_analysis：项目文件夹理解</h1>
+      <p class="sub">
+        目标：用一张图 + 一份目录说明，把“入口 → 核心流水线 → 数据/LLM/推送 → 多端呈现”的关系讲清楚。
+      </p>
+      <div class="chips">
+        <span class="chip">后端核心：src/ + data_provider/</span>
+        <span class="chip">对外入口：main.py / server.py / api/ / bot/</span>
+        <span class="chip">前端与桌面：apps/dsa-web / apps/dsa-desktop</span>
+        <span class="chip">可运行产物：reports/*.md</span>
+      </div>
+
+      <div class="card">
+        <h2>关系图（目录级）</h2>
+        <div class="body">
+          这是从“谁触发分析 → 调用哪个核心模块 → 依赖哪些外部适配器 → 输出到哪里”抽象出来的目录关系。
+          <div class="legend">
+            <div class="legend-item"><span class="swatch accent"></span>入口/接口层</div>
+            <div class="legend-item"><span class="swatch accent2"></span>核心业务与编排</div>
+            <div class="legend-item"><span class="swatch warn"></span>数据源/外部依赖适配</div>
+            <div class="legend-item"><span class="swatch danger"></span>产物/运行时侧</div>
+          </div>
+        </div>
+        <div class="svg-wrap">
+          <svg viewBox="0 0 1100 540" role="img" aria-label="项目目录关系图">
+            <defs>
+              <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="rgba(122,162,255,.25)" />
+                <stop offset="1" stop-color="rgba(122,162,255,.08)" />
+              </linearGradient>
+              <linearGradient id="g2" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="rgba(110,231,183,.22)" />
+                <stop offset="1" stop-color="rgba(110,231,183,.08)" />
+              </linearGradient>
+              <linearGradient id="g3" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="rgba(251,191,36,.22)" />
+                <stop offset="1" stop-color="rgba(251,191,36,.08)" />
+              </linearGradient>
+              <linearGradient id="g4" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="rgba(251,113,133,.22)" />
+                <stop offset="1" stop-color="rgba(251,113,133,.08)" />
+              </linearGradient>
+              <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(232,236,255,.70)"></path>
+              </marker>
+            </defs>
+
+            <rect x="0" y="0" width="1100" height="540" rx="18" fill="rgba(0,0,0,.08)" stroke="rgba(42,53,102,.55)" />
+
+            <g>
+              <rect x="40" y="40" width="340" height="120" rx="14" fill="url(#g1)" stroke="rgba(122,162,255,.55)" />
+              <text x="60" y="70" class="box-title">入口（触发分析 / 服务启动）</text>
+              <text x="60" y="96" class="box-path">main.py</text>
+              <text x="60" y="116" class="box-path">server.py</text>
+              <text x="60" y="140" class="box-sub">CLI/定时任务、FastAPI 启动、合并推送与大盘复盘编排</text>
+            </g>
+
+            <g>
+              <rect x="420" y="40" width="300" height="120" rx="14" fill="url(#g1)" stroke="rgba(122,162,255,.55)" />
+              <text x="440" y="70" class="box-title">对外接口层（HTTP API）</text>
+              <text x="440" y="96" class="box-path">api/</text>
+              <text x="440" y="120" class="box-sub">FastAPI 路由、中间件、schema；调用 services/core 提供能力</text>
+            </g>
+
+            <g>
+              <rect x="760" y="40" width="300" height="120" rx="14" fill="url(#g1)" stroke="rgba(122,162,255,.55)" />
+              <text x="780" y="70" class="box-title">对外接口层（Bot）</text>
+              <text x="780" y="96" class="box-path">bot/</text>
+              <text x="780" y="120" class="box-sub">命令解析、平台适配；把消息转为“分析/复盘/查询”的内部调用</text>
+            </g>
+
+            <g>
+              <rect x="40" y="200" width="520" height="160" rx="14" fill="url(#g2)" stroke="rgba(110,231,183,.55)" />
+              <text x="60" y="230" class="box-title">核心业务与编排（主流水线）</text>
+              <text x="60" y="256" class="box-path">src/core/</text>
+              <text x="60" y="278" class="box-sub">StockAnalysisPipeline：并发、异常隔离、落库、报告与通知的主流程</text>
+              <text x="60" y="304" class="box-path">src/market_analyzer.py + src/core/market_review.py</text>
+              <text x="60" y="326" class="box-sub">大盘复盘：指数/新闻 + LLM 生成复盘报告</text>
+            </g>
+
+            <g>
+              <rect x="600" y="200" width="460" height="160" rx="14" fill="url(#g2)" stroke="rgba(110,231,183,.55)" />
+              <text x="620" y="230" class="box-title">业务服务层（给 API/Web/Bot 复用）</text>
+              <text x="620" y="256" class="box-path">src/services/</text>
+              <text x="620" y="278" class="box-sub">分析服务、任务队列、系统配置等，把外部请求转成核心流水线调用</text>
+              <text x="620" y="304" class="box-path">src/notification.py</text>
+              <text x="620" y="326" class="box-sub">报告渲染、落盘、通知渠道分发与降级策略</text>
+            </g>
+
+            <g>
+              <rect x="40" y="400" width="360" height="110" rx="14" fill="url(#g3)" stroke="rgba(251,191,36,.55)" />
+              <text x="60" y="430" class="box-title">外部数据源适配（行情/基本面/筹码）</text>
+              <text x="60" y="456" class="box-path">data_provider/</text>
+              <text x="60" y="478" class="box-sub">多源抓取 + 自动切换：efinance/akshare/tushare/yfinance/longbridge...</text>
+            </g>
+
+            <g>
+              <rect x="430" y="400" width="300" height="110" rx="14" fill="url(#g2)" stroke="rgba(110,231,183,.55)" />
+              <text x="450" y="430" class="box-title">存储与仓储（历史/断点续跑）</text>
+              <text x="450" y="456" class="box-path">src/storage.py + src/repositories/</text>
+              <text x="450" y="478" class="box-sub">SQLite/ORM、历史记录、组合等数据访问抽象</text>
+            </g>
+
+            <g>
+              <rect x="760" y="400" width="300" height="110" rx="14" fill="url(#g4)" stroke="rgba(251,113,133,.55)" />
+              <text x="780" y="430" class="box-title">产物与展示端</text>
+              <text x="780" y="456" class="box-path">reports/ + apps/</text>
+              <text x="780" y="478" class="box-sub">报告文件、WebUI、桌面端；由 API/通知/静态资源承载</text>
+            </g>
+
+            <path d="M 210 160 L 300 200" stroke="rgba(232,236,255,.65)" stroke-width="2" fill="none" marker-end="url(#arrow)" />
+            <path d="M 570 160 L 510 200" stroke="rgba(232,236,255,.65)" stroke-width="2" fill="none" marker-end="url(#arrow)" />
+            <path d="M 900 160 L 800 200" stroke="rgba(232,236,255,.65)" stroke-width="2" fill="none" marker-end="url(#arrow)" />
+
+            <path d="M 300 360 L 220 400" stroke="rgba(232,236,255,.65)" stroke-width="2" fill="none" marker-end="url(#arrow)" />
+            <path d="M 740 360 L 580 400" stroke="rgba(232,236,255,.65)" stroke-width="2" fill="none" marker-end="url(#arrow)" />
+            <path d="M 560 280 L 600 280" stroke="rgba(232,236,255,.65)" stroke-width="2" fill="none" marker-end="url(#arrow)" />
+
+            <path d="M 730 455 L 760 455" stroke="rgba(232,236,255,.65)" stroke-width="2" fill="none" marker-end="url(#arrow)" />
+            <path d="M 400 455 L 430 455" stroke="rgba(232,236,255,.65)" stroke-width="2" fill="none" marker-end="url(#arrow)" />
+          </svg>
+          <div class="note">
+            读图提示：入口层（main.py/server.py、api/、bot/）把请求转成内部调用；核心编排集中在 src/core；数据抓取集中在 data_provider；产物落在 reports/ 并可由 apps/ 前端/桌面端呈现。
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>目录说明（逐个文件夹）</h2>
+        <div class="body">
+          下面按“职责边界”解释每个目录做什么，以及它和其他目录的关系。
+          <table class="table">
+            <thead>
+              <tr>
+                <th style="width: 220px;">目录</th>
+                <th>做什么</th>
+                <th style="width: 360px;">与谁关联（典型调用/依赖）</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="k">src/</span></td>
+                <td>后端主要业务代码。包含核心流水线、服务层、通知、存储、Agent 子系统等。</td>
+                <td>被 <span class="k">main.py/server.py/api/</span> 调用；依赖 <span class="k">data_provider/</span> 拉数据。</td>
+              </tr>
+              <tr>
+                <td><span class="k">src/core/</span></td>
+                <td>核心编排与主流程：批量分析、并发、断点续跑、复盘等。</td>
+                <td>调用 <span class="k">data_provider/</span>、<span class="k">src/storage.py</span>、<span class="k">src/notification.py</span>。</td>
+              </tr>
+              <tr>
+                <td><span class="k">src/services/</span></td>
+                <td>服务层封装：供 API/Web/Bot 复用的业务入口；任务队列、配置服务等。</td>
+                <td>被 <span class="k">api/</span> 和部分 <span class="k">main.py</span> 调用；内部转调 <span class="k">src/core/</span>。</td>
+              </tr>
+              <tr>
+                <td><span class="k">data_provider/</span></td>
+                <td>数据源策略层：对接 efinance/akshare/tushare/yfinance/长桥等，统一接口+自动切换+熔断。</td>
+                <td>被 <span class="k">src/core/pipeline.py</span> 与 <span class="k">src/market_analyzer.py</span> 调用。</td>
+              </tr>
+              <tr>
+                <td><span class="k">api/</span></td>
+                <td>FastAPI 接口层：路由、schema、中间件；把 WebUI/外部请求转换为服务调用。</td>
+                <td>调用 <span class="k">src/services/</span>；由 <span class="k">server.py</span> 启动。</td>
+              </tr>
+              <tr>
+                <td><span class="k">bot/</span></td>
+                <td>机器人接入：命令体系（/analyze /market 等）、平台适配（飞书/钉钉/Discord）。</td>
+                <td>命令内部会调用 <span class="k">src/core</span>/<span class="k">src/services</span> 做分析/复盘/查询。</td>
+              </tr>
+              <tr>
+                <td><span class="k">apps/</span></td>
+                <td>前端与桌面端：Web 工作台与 Electron 容器，提供交互与可视化。</td>
+                <td>通过 HTTP 调用 <span class="k">api/</span>；静态资源可由后端托管。</td>
+              </tr>
+              <tr>
+                <td><span class="k">apps/dsa-web/</span></td>
+                <td>React/Vite WebUI：页面、组件、API client、e2e 测试。</td>
+                <td>直接消费 <span class="k">api/v1</span> 的接口与 schema。</td>
+              </tr>
+              <tr>
+                <td><span class="k">apps/dsa-desktop/</span></td>
+                <td>Electron 桌面端：包装 WebUI，提供桌面分发能力。</td>
+                <td>加载 WebUI（本地或后端托管），间接使用 <span class="k">api/</span>。</td>
+              </tr>
+              <tr>
+                <td><span class="k">docs/</span></td>
+                <td>文档与说明：部署、配置、FAQ、Bot 配置、LLM 配置指南等。</td>
+                <td>与代码解耦；用于使用与运维说明。</td>
+              </tr>
+              <tr>
+                <td><span class="k">tests/</span></td>
+                <td>后端 pytest 测试：覆盖提示词、复盘、核心逻辑等。</td>
+                <td>验证 <span class="k">src/</span>、<span class="k">data_provider/</span> 行为与回归。</td>
+              </tr>
+              <tr>
+                <td><span class="k">scripts/</span></td>
+                <td>本地/CI 脚本：构建、检查、生成索引、CI gate、部署辅助等。</td>
+                <td>被 CI/workflows、本地开发与打包流程调用。</td>
+              </tr>
+              <tr>
+                <td><span class="k">docker/</span></td>
+                <td>容器化：Dockerfile 与 compose，提供部署路径。</td>
+                <td>启动后端与依赖环境；与 <span class="k">server.py</span> 入口配合。</td>
+              </tr>
+              <tr>
+                <td><span class="k">.github/</span></td>
+                <td>CI/CD 与自动化：工作流、模板、审查脚本。</td>
+                <td>驱动测试、构建、发布、每日任务等。</td>
+              </tr>
+              <tr>
+                <td><span class="k">patch/</span></td>
+                <td>第三方接口补丁与兼容层（例如东财相关 patch）。</td>
+                <td>被部分数据源/抓取代码引用，解决兼容性或稳定性问题。</td>
+              </tr>
+              <tr>
+                <td><span class="k">sources/</span></td>
+                <td>静态资源与素材（logo、截图、演示动图等）。</td>
+                <td>通常用于文档/宣传，不参与运行逻辑。</td>
+              </tr>
+              <tr>
+                <td><span class="k">reports/</span></td>
+                <td>运行产物目录：保存日报、复盘等 Markdown 报告。</td>
+                <td>由 <span class="k">src/notification.py</span> 落盘；Web/Bot/通知会展示其内容。</td>
+              </tr>
+              <tr>
+                <td><span class="k">.claude/</span></td>
+                <td>仓库内 AI 协作资产（skills）。</td>
+                <td>对开发流程有帮助，不影响运行时。</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <details>
+            <summary>一次“分析股票”的调用链（从目录角度看）</summary>
+            <p class="mini">
+              1) 入口触发：<span class="k">main.py</span>（CLI/定时）或 <span class="k">server.py</span>→<span class="k">api/</span>（HTTP）或 <span class="k">bot/</span>（命令）<br />
+              2) 进入核心：<span class="k">src/core/pipeline.py</span> 组织并发与主流程<br />
+              3) 拉数据：<span class="k">data_provider/</span> 多源抓取（失败自动切换）<br />
+              4) 情报与 LLM：<span class="k">src/search_service.py</span>（如启用）+ <span class="k">src/analyzer.py</span>/<span class="k">src/agent/</span>（按配置）<br />
+              5) 落盘与推送：<span class="k">src/notification.py</span> 写入 <span class="k">reports/</span> 并可推送到各渠道<br />
+              6) 展示：<span class="k">apps/dsa-web</span>/<span class="k">apps/dsa-desktop</span> 或 Bot/通知端查看
+            </p>
+          </details>
+
+          <details>
+            <summary>一次“大盘复盘”的调用链（从目录角度看）</summary>
+            <p class="mini">
+              1) 入口触发：<span class="k">main.py --market-review</span> 或 Bot 的 <span class="k">/market</span> 命令<br />
+              2) 编排：<span class="k">src/core/market_review.py</span> 选择市场区域与是否合并推送<br />
+              3) 分析与 Prompt：<span class="k">src/market_analyzer.py</span> 取指数/新闻并调用 LLM 生成复盘报告<br />
+              4) 落盘：保存为 <span class="k">reports/market_review_YYYYMMDD.md</span>
+            </p>
+          </details>
+
+          <div class="footer">
+            这份 HTML 是“目录级地图”。如果你想继续深入到“某个目录内部的模块划分”（比如 src/agent/ 或 data_provider/ 的具体策略），我可以按你关注的路径再生成一张更细的子图。
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+
