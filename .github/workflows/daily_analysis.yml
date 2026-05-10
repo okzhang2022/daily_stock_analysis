@@ -2,15 +2,14 @@ name: 每日股票分析
 
 on:
   schedule:
-    # 对应北京时间周二至周六凌晨 05:05（美股收盘后运行）
+    # 北京时间周二至周六凌晨 05:05（美股收盘后运行）
     - cron: '5 21 * * 1-5'
-  
   workflow_dispatch:
     inputs:
       mode:
         description: '运行模式'
         required: true
-        default: 'full'
+        default: 'stocks-only'
         type: choice
         options:
           - full
@@ -19,12 +18,12 @@ on:
       force_run:
         description: '强制运行（跳过交易日检查）'
         required: false
-        default: false
+        default: true
         type: boolean
 
 concurrency:
   group: stock-analysis
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -34,7 +33,7 @@ permissions:
 jobs:
   analyze:
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ fromJSON(vars.ANALYSIS_TIMEOUT_MINUTES || '30') }}
+    timeout-minutes: 30
     
     steps:
       - name: 检出代码
@@ -57,71 +56,60 @@ jobs:
       
       - name: 执行股票分析
         env:
-          # ==========================================
-          # AI 配置
-          # ==========================================
+          # --- 核心配置：只看美股 ---
+          STOCK_LIST: "AMD,INTC,MU"
+          MARKET_REVIEW_REGION: "us"
+          MARKET_REVIEW_ENABLED: "false"
+          REPORT_TYPE: "simple"
+          TRADING_DAY_CHECK_ENABLED: "false"
+          
+          # --- AI 密钥 (从你的 Secrets 自动读取) ---
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-1.5-flash' }}
-          
-          # ==========================================
-          # 核心修正：针对美股和瘦身
-          # ==========================================
-          STOCK_LIST: ${{ vars.STOCK_LIST || 'AMD,INTC,MU' }}
-          MARKET_REVIEW_REGION: "us"        # 强制设为美国市场
-          MARKET_REVIEW_ENABLED: "false"     # 关闭大盘综述，只看个股，更精简
-          REPORT_TYPE: "simple"             # 开启简易模式
-          TRADING_DAY_CHECK_ENABLED: "false" # 防止时差导致交易日判断失败
-          
-          # 继承原有的所有 AI 密钥变量（此处略去冗长的列表，保留你原有的即可）
-          LITELLM_API_KEY: ${{ secrets.LITELLM_API_KEY }}
-          AIHUBMIX_KEY: ${{ secrets.AIHUBMIX_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          LITELLM_API_KEY: ${{ secrets.LITELLM_API_KEY }}
           
         run: |
-          # 1. 执行分析程序
-          python main.py
+          # 1. 运行主程序
+          python main.py || echo "⚠️ 分析部分遇到异常，继续后续清理步骤"
           
-          # 2. 强力瘦身脚本：物理删除废话
-          echo "🧹 正在清理报告中的无效数据..."
-          cd reports
-          
-          # 删除所有包含 N/A、数据缺失、或者为 0 的技术指标行
-          sed -i '/N\/A/d' *.md
-          sed -i '/数据缺失/d' *.md
-          sed -i '/| 0 |/d' *.md
-          sed -i '/| 0.0/d' *.md
-          
-          # 删除长表格板块（保留仪表盘和建议）
-          sed -i '/当日行情/,/---/d' *.md
-          sed -i '/数据透视/,/---/d' *.md
-          sed -i '/检查清单/,/---/d' *.md
-          
-          echo "✅ 瘦身完成"
+          # 2. 物理瘦身：如果生成了报告，就删掉 N/A 行和冗余板块
+          if [ -d "reports" ] && [ "$(ls -A reports/*.md 2>/dev/null)" ]; then
+            echo "🧹 正在物理瘦身 Markdown 报告..."
+            cd reports
+            # 删除包含空数据的行
+            sed -i '/N\/A/d' *.md
+            sed -i '/数据缺失/d' *.md
+            sed -i '/| 0 |/d' *.md
+            sed -i '/| 0.0/d' *.md
+            # 删除多余的大长段落板块
+            sed -i '/当日行情/,/---/d' *.md
+            sed -i '/数据透视/,/---/d' *.md
+            sed -i '/检查清单/,/---/d' *.md
+            cd ..
+            echo "✅ 瘦身处理完成"
+          else
+            echo "❌ 未检测到 .md 报告文件"
+          fi
 
-      - name: 生成并美化 HTML 网页
+      - name: 生成 HTML 网页
         run: |
-          LATEST_MD=$(ls -t reports/report_*.md | head -1)
+          LATEST_MD=$(ls -t reports/report_*.md 2>/dev/null | head -1 || echo "")
           if [ -n "$LATEST_MD" ]; then
-            echo "<html><head><meta charset='utf-8'><title>美股收盘分析报告</title>
+            echo "<html><head><meta charset='utf-8'><title>美股分析报告</title>
             <style>
-              body { font-family: -apple-system, system-ui, sans-serif; line-height: 1.6; padding: 20px; max-width: 700px; margin: auto; background: #f0f2f5; }
-              .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
-              h2 { color: #1a73e8; border-bottom: 2px solid #e8f0fe; padding-bottom: 8px; }
-              table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 14px; }
-              th, td { border: 1px solid #eee; padding: 10px; text-align: left; }
-              th { background: #f8f9fa; font-weight: 600; }
-              strong { color: #d93025; }
-              hr { border: 0; border-top: 1px solid #eee; margin: 20px 0; }
+              body { font-family: sans-serif; line-height: 1.6; padding: 20px; max-width: 800px; margin: auto; background: #f9f9f9; }
+              .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+              table { width: 100%; border-collapse: collapse; }
+              th, td { border: 1px solid #eee; padding: 8px; text-align: left; }
+              th { background: #f4f4f4; }
+              strong { color: #d00; }
             </style>
             </head><body><div class='card'>" > reports/index.html
-            
             python -m markdown "$LATEST_MD" >> reports/index.html
-            
             echo "</div></body></html>" >> reports/index.html
           else
-            echo "<h1>今日未生成分析报告</h1>" > reports/index.html
+            echo "<html><body><h1>分析失败</h1><p>请去 Action 日志查看失败原因（通常是数据源 API 限制）。</p></body></html>" > reports/index.html
           fi
 
       - name: Setup Pages
@@ -130,6 +118,7 @@ jobs:
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:
+          # 必须指向生成的 reports 目录
           path: './reports'
 
       - name: Deploy to GitHub Pages
