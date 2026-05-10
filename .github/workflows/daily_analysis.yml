@@ -46,6 +46,9 @@ jobs:
       
       - name: 检出代码
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # <--- 关键是加这一行，让它抓取完整的历史记录
+          lfs: true
       
       - name: 设置 Python 环境
         uses: actions/setup-python@v6
@@ -284,3 +287,11 @@ jobs:
 
       - name: 最终发布
         uses: actions/deploy-pages@v4
+
+      - name: Sync to Hugging Face
+        # 这一步一定要放在你“提交报告到 GitHub”的步骤之后
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          # 强行推送当前最新的代码和报告到 HF
+          git push --force https://okzhang2022:$HF_TOKEN@huggingface.co/spaces/okzhanghy/daily_stock_analysis main:main
