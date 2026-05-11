@@ -7,6 +7,7 @@ sdk: streamlit
 sdk_version: 1.31.0
 app_file: webui.py
 pinned: false
+sdk: streamlit
 app_port: 7860
 ---
 
