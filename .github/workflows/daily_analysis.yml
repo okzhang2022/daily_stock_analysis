@@ -295,16 +295,26 @@ jobs:
         run: |
           # 强行推送当前最新的代码和报告到 HF
           # 1. 自报家门，防止 Git 报错
+          # 1. 基础配置
           git config --global user.email "github-actions@github.com"
           git config --global user.name "github-actions"
           
-          # 2. 彻底抹除带大文件的历史记录，创建一个干净的“起跑点”
-          git checkout --orphan latest_branch
-          git add -A
+          # 2. 创建一个纯净的临时目录
+          mkdir temp_sync
           
-          # 3. 提交当前所有文件（不带任何历史包袱）
-          git commit -m "Initial clean sync to HF"
+          # 3. 只拷贝核心运行文件（如果有漏掉的你再加）
+          # 我们不拷贝 sources 文件夹，因为里面全是报错的图片
+          cp webui.py temp_sync/
+          cp requirements.txt temp_sync/
+          cp README.md temp_sync/
+          cp -r src temp_sync/      # 拷贝代码目录
+          cp -r reports temp_sync/  # 拷贝报告目录（如果里面有大图也可能会报错）
+
+          # 4. 进入临时目录并初始化一个全新的、没历史的仓库
+          cd temp_sync
+          git init
+          git add .
+          git commit -m "Pure code sync"
           
-          # 4. 强行推送到 Hugging Face 的 main 分支
-          # 这里的 latest_branch:main 意思是把本地的新分支推给远程的 main
-          git push --force https://okzhang2022:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/okzhanghy/daily_stock_analysis latest_branch:main
+          # 5. 暴力推送到 HF
+          git push --force https://okzhang2022:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/okzhanghy/daily_stock_analysis main
