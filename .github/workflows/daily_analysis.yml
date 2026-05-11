@@ -292,25 +292,22 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          # 1. 基础身份配置
+          # 1. 设置身份，免得 Git 乱叫
           git config --global user.email "github-actions@github.com"
           git config --global user.name "github-actions"
           
-          # 2. 核心逻辑：把要用的文件单独“拎”出来放到一个新地方
-          mkdir sync_dir
-          cp webui.py sync_dir/
-          cp requirements.txt sync_dir/
-          cp README.md sync_dir/
-          cp -r src sync_dir/
+          # 2. 【核心】物理切断所有报错来源
+          # 删掉所有图片、动图、PSD、图标（这些就是之前报 Larger than 10MB 的东西）
+          find . -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.gif" -o -name "*.psd" -o -name "*.ico" \) -delete
+          # 删掉所有 Python 缓存（这就是你图里报 binary files 的原因）
+          find . -type d -name "__pycache__" -exec rm -rf {} +
+          find . -name "*.pyc" -delete
           
-          # 3. 关键点：如果不小心拷了图片，在这里强行删掉它们，防止 HF 报错
-          find sync_dir -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.gif" -o -name "*.psd" \) -delete
-          
-          # 4. 在新地方建立一个完全干净的仓库，名字就叫 main
-          cd sync_dir
+          # 3. 彻底洗白历史，创建一个只有代码的干净仓库
+          rm -rf .git
           git init -b main
           git add .
-          git commit -m "Pure code sync without binary files"
+          git commit -m "Final cleanup and sync"
           
-          # 5. 暴力推送到 HF
+          # 4. 暴力覆盖式推送
           git push --force https://okzhang2022:$HF_TOKEN@huggingface.co/spaces/okzhanghy/daily_stock_analysis main
