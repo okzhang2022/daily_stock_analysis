@@ -1,3 +1,14 @@
+---
+title: Daily Stock Analysis
+emoji: 📈
+colorFrom: blue
+colorTo: green
+sdk: streamlit
+sdk_version: 1.31.0
+app_file: webui.py
+pinned: false
+---
+
 <div align="center">
 
 # 📈 股票智能分析系统
