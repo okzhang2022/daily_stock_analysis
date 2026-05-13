@@ -2001,7 +2001,8 @@ class StockAnalysisPipeline:
                         if use_image:
                             result = self.notifier._send_telegram_photo(image_bytes)
                         else:
-                            result = self.notifier.send_to_telegram(report)
+                            telegram_report = self.notifier.generate_brief_report(results)
+                            result = self.notifier.send_to_telegram(telegram_report)
                         non_wechat_success = result or non_wechat_success
                     elif channel == NotificationChannel.EMAIL:
                         if stock_email_groups:
