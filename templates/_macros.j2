@@ -1,4 +1,3 @@
-{# Shared macros for report templates #}
 {% macro market_snapshot(result) %}
 {% set snapshot = result.market_snapshot if result.market_snapshot else {} %}
 {% if snapshot %}
@@ -14,5 +13,19 @@
 | {{ snapshot.get('price', 'N/A') }} | {{ snapshot.get('volume_ratio', 'N/A') }} | {{ snapshot.get('turnover_rate', 'N/A') }} | {{ snapshot.get('source', 'N/A') }} |
 {% endif %}
 
+{% endif %}
+{% endmacro %}
+
+{% macro market_snapshot_compact(result) %}
+{% set snapshot = result.market_snapshot if result.market_snapshot else {} %}
+{% if snapshot %}
+{% set parts = [] %}
+{% if snapshot.get('close') %}{% set parts = parts + [labels.close_label ~ ' ' ~ snapshot.get('close')] %}{% endif %}
+{% if snapshot.get('pct_chg') %}{% set parts = parts + [labels.change_pct_label ~ ' ' ~ snapshot.get('pct_chg')] %}{% endif %}
+{% if snapshot.get('volume_ratio') %}{% set parts = parts + [labels.volume_ratio_label ~ ' ' ~ snapshot.get('volume_ratio')] %}{% endif %}
+{% if snapshot.get('turnover_rate') %}{% set parts = parts + [labels.turnover_rate_label ~ ' ' ~ snapshot.get('turnover_rate')] %}{% endif %}
+{% if parts %}
+📈 {{ parts|join(' | ') }}
+{% endif %}
 {% endif %}
 {% endmacro %}

@@ -836,8 +836,7 @@ class NotificationService(
         if report_date is None:
             report_date = datetime.now().strftime('%Y-%m-%d')
 
-        # 按评分排序（高分在前）
-        sorted_results = sorted(results, key=lambda x: x.sentiment_score, reverse=True)
+        sorted_results = list(results)
 
         # 统计信息 - 使用 decision_type 字段准确统计
         buy_count = sum(1 for r in results if getattr(r, 'decision_type', '') == 'buy')
@@ -858,14 +857,19 @@ class NotificationService(
                 f"## 📊 {labels['summary_heading']}",
                 "",
             ])
+            signal_label = "信号" if report_language == "zh" else "Signal"
+            stock_label = "股票" if report_language == "zh" else "Stock"
+            report_lines.extend([
+                f"| {signal_label} | {stock_label} | {labels['advice_label']} | {labels['score_label']} | {labels['trend_label']} |",
+                "|---|---|---:|---:|---|",
+            ])
             for r in sorted_results:
                 _, signal_emoji, _ = self._get_signal_level(r)
                 display_name = self._get_display_name(r, report_language)
                 report_lines.append(
-                    f"{signal_emoji} **{display_name}({r.code})**: "
+                    f"| {signal_emoji} | **{display_name}({r.code})** | "
                     f"{localize_operation_advice(r.operation_advice, report_language)} | "
-                    f"{labels['score_label']} {r.sentiment_score} | "
-                    f"{localize_trend_prediction(r.trend_prediction, report_language)}"
+                    f"{r.sentiment_score} | {localize_trend_prediction(r.trend_prediction, report_language)} |"
                 )
             report_lines.extend([
                 "",
@@ -894,30 +898,28 @@ class NotificationService(
                         f"### 📰 {labels['info_heading']}",
                         "",
                     ])
-                    # 舆情情绪总结
                     if intel.get('sentiment_summary'):
-                        report_lines.append(f"**💭 {labels['sentiment_summary_label']}**: {intel['sentiment_summary']}")
-                    # 业绩预期
+                        report_lines.append(
+                            f"- **💭 {labels['sentiment_summary_label']}**: {str(intel['sentiment_summary'])[:90]}"
+                        )
                     if intel.get('earnings_outlook'):
-                        report_lines.append(f"**📊 {labels['earnings_outlook_label']}**: {intel['earnings_outlook']}")
-                    # 风险警报（醒目显示）
+                        report_lines.append(
+                            f"- **📊 {labels['earnings_outlook_label']}**: {str(intel['earnings_outlook'])[:90]}"
+                        )
                     risk_alerts = intel.get('risk_alerts', [])
                     if risk_alerts:
-                        report_lines.append("")
-                        report_lines.append(f"**🚨 {labels['risk_alerts_label']}**:")
-                        for alert in risk_alerts:
-                            report_lines.append(f"- {alert}")
-                    # 利好催化
+                        report_lines.append(f"- **🚨 {labels['risk_alerts_label']}**:")
+                        for alert in (risk_alerts or [])[:2]:
+                            report_lines.append(f"  - {str(alert)[:80]}")
                     catalysts = intel.get('positive_catalysts', [])
                     if catalysts:
-                        report_lines.append("")
-                        report_lines.append(f"**✨ {labels['positive_catalysts_label']}**:")
-                        for cat in catalysts:
-                            report_lines.append(f"- {cat}")
-                    # 最新消息
+                        report_lines.append(f"- **✨ {labels['positive_catalysts_label']}**:")
+                        for cat in (catalysts or [])[:2]:
+                            report_lines.append(f"  - {str(cat)[:80]}")
                     if intel.get('latest_news'):
-                        report_lines.append("")
-                        report_lines.append(f"**📢 {labels['latest_news_label']}**: {intel['latest_news']}")
+                        report_lines.append(
+                            f"- **📢 {labels['latest_news_label']}**: {str(intel['latest_news'])[:90]}"
+                        )
                     report_lines.append("")
                 
                 # ========== 核心结论 ==========
@@ -929,7 +931,9 @@ class NotificationService(
                 report_lines.extend([
                     f"### 📌 {labels['core_conclusion_heading']}",
                     "",
-                    f"**{signal_emoji} {signal_text}** | {localize_trend_prediction(result.trend_prediction, report_language)}",
+                    f"**{signal_emoji} {signal_text}** | "
+                    f"{localize_trend_prediction(result.trend_prediction, report_language)} | "
+                    f"{labels['score_label']} {result.sentiment_score}",
                     "",
                     f"> **{labels['one_sentence_label']}**: {one_sentence}",
                     "",
@@ -939,112 +943,147 @@ class NotificationService(
                 # 持仓分类建议
                 if pos_advice:
                     report_lines.extend([
-                        f"| {labels['position_status_label']} | {labels['action_advice_label']} |",
-                        "|---------|---------|",
-                        f"| 🆕 **{labels['no_position_label']}** | {pos_advice.get('no_position', localize_operation_advice(result.operation_advice, report_language))} |",
-                        f"| 💼 **{labels['has_position_label']}** | {pos_advice.get('has_position', labels['continue_holding'])} |",
+                        f"- 🆕 **{labels['no_position_label']}**: {str(pos_advice.get('no_position', localize_operation_advice(result.operation_advice, report_language)))[:120]}",
+                        f"- 💼 **{labels['has_position_label']}**: {str(pos_advice.get('has_position', labels['continue_holding']))[:120]}",
                         "",
                     ])
 
-                self._append_market_snapshot(report_lines, result)
-                
-                # ========== 数据透视 ==========
+                snapshot = getattr(result, 'market_snapshot', None) or {}
+                if snapshot:
+                    parts = []
+                    if snapshot.get('close'):
+                        parts.append(f"{labels['close_label']} {snapshot.get('close')}")
+                    if snapshot.get('pct_chg'):
+                        parts.append(f"{labels['change_pct_label']} {snapshot.get('pct_chg')}")
+                    if snapshot.get('volume_ratio'):
+                        parts.append(f"{labels['volume_ratio_label']} {snapshot.get('volume_ratio')}")
+                    if snapshot.get('turnover_rate'):
+                        parts.append(f"{labels['turnover_rate_label']} {snapshot.get('turnover_rate')}")
+                    if parts:
+                        report_lines.append("📈 " + " | ".join(parts))
+                        report_lines.append("")
+
                 data_persp = dashboard.get('data_perspective', {}) if dashboard else {}
                 if data_persp:
-                    trend_data = data_persp.get('trend_status', {})
-                    price_data = data_persp.get('price_position', {})
-                    vol_data = data_persp.get('volume_analysis', {})
-                    chip_data = data_persp.get('chip_structure', {})
-                    
+                    trend_data = data_persp.get('trend_status', {}) or {}
+                    price_data = data_persp.get('price_position', {}) or {}
+                    chip_data = data_persp.get('chip_structure', {}) or {}
                     report_lines.extend([
-                        f"### 📊 {labels['data_perspective_heading']}",
+                        f"- **{labels['ma_alignment_label']}**: {trend_data.get('ma_alignment', 'N/A')} | {labels['trend_strength_label']}: {trend_data.get('trend_score', 'N/A')}/100",
+                        f"- **{labels['bias_ma5_label']}**: {price_data.get('bias_ma5', 'N/A')}% {price_data.get('bias_status', 'N/A')}",
+                        f"- **{labels['chip_label']}**: {localize_chip_health(chip_data.get('chip_health', 'N/A'), report_language)}",
                         "",
                     ])
-                    # 趋势状态
-                    if trend_data:
-                        is_bullish = (
-                            f"✅ {labels['yes_label']}"
-                            if trend_data.get('is_bullish', False)
-                            else f"❌ {labels['no_label']}"
-                        )
-                        report_lines.extend([
-                            f"**{labels['ma_alignment_label']}**: {trend_data.get('ma_alignment', 'N/A')} | "
-                            f"{labels['bullish_alignment_label']}: {is_bullish} | "
-                            f"{labels['trend_strength_label']}: {trend_data.get('trend_score', 'N/A')}/100",
-                            "",
-                        ])
-                    # 价格位置
-                    if price_data:
-                        bias_status = price_data.get('bias_status', 'N/A')
-                        report_lines.extend([
-                            f"| {labels['price_metrics_label']} | {labels['current_price_label']} |",
-                            "|---------|------|",
-                            f"| {labels['current_price_label']} | {price_data.get('current_price', 'N/A')} |",
-                            f"| {labels['ma5_label']} | {price_data.get('ma5', 'N/A')} |",
-                            f"| {labels['ma10_label']} | {price_data.get('ma10', 'N/A')} |",
-                            f"| {labels['ma20_label']} | {price_data.get('ma20', 'N/A')} |",
-                            f"| {labels['bias_ma5_label']} | {price_data.get('bias_ma5', 'N/A')}% {bias_status} |",
-                            f"| {labels['support_level_label']} | {price_data.get('support_level', 'N/A')} |",
-                            f"| {labels['resistance_level_label']} | {price_data.get('resistance_level', 'N/A')} |",
-                            "",
-                        ])
-                    # 量能分析
-                    if vol_data:
-                        report_lines.extend([
-                            f"**{labels['volume_label']}**: {labels['volume_ratio_label']} {vol_data.get('volume_ratio', 'N/A')} ({vol_data.get('volume_status', '')}) | "
-                            f"{labels['turnover_rate_label']} {vol_data.get('turnover_rate', 'N/A')}%",
-                            f"💡 *{vol_data.get('volume_meaning', '')}*",
-                            "",
-                        ])
-                    # 筹码结构
-                    if chip_data:
-                        chip_health = localize_chip_health(chip_data.get('chip_health', 'N/A'), report_language)
-                        report_lines.extend([
-                            f"**{labels['chip_label']}**: {chip_data.get('profit_ratio', 'N/A')} | {chip_data.get('avg_cost', 'N/A')} | "
-                            f"{chip_data.get('concentration', 'N/A')} {chip_health}",
-                            "",
-                        ])
-                
-                # ========== 作战计划 ==========
+
                 battle = dashboard.get('battle_plan', {}) if dashboard else {}
                 if battle:
                     report_lines.extend([
                         f"### 🎯 {labels['battle_plan_heading']}",
                         "",
                     ])
-                    # 狙击点位
-                    sniper = battle.get('sniper_points', {})
+                    sniper = battle.get('sniper_points', {}) or {}
                     if sniper:
                         report_lines.extend([
-                            f"**📍 {labels['action_points_heading']}**",
-                            "",
-                            f"| {labels['action_points_heading']} | {labels['current_price_label']} |",
-                            "|---------|------|",
-                            f"| 🎯 {labels['ideal_buy_label']} | {self._clean_sniper_value(sniper.get('ideal_buy', 'N/A'))} |",
-                            f"| 🔵 {labels['secondary_buy_label']} | {self._clean_sniper_value(sniper.get('secondary_buy', 'N/A'))} |",
-                            f"| 🛑 {labels['stop_loss_label']} | {self._clean_sniper_value(sniper.get('stop_loss', 'N/A'))} |",
-                            f"| 🎊 {labels['take_profit_label']} | {self._clean_sniper_value(sniper.get('take_profit', 'N/A'))} |",
+                            f"| 🎯 {labels['ideal_buy_label']} | 🛑 {labels['stop_loss_label']} | 🎊 {labels['take_profit_label']} |",
+                            "|---|---|---|",
+                            f"| {self._clean_sniper_value(sniper.get('ideal_buy', 'N/A'))} | {self._clean_sniper_value(sniper.get('stop_loss', 'N/A'))} | {self._clean_sniper_value(sniper.get('take_profit', 'N/A'))} |",
                             "",
                         ])
-                    # 仓位策略
-                    position = battle.get('position_strategy', {})
-                    if position:
+                    position = battle.get('position_strategy', {}) or {}
+                    if position and position.get('suggested_position'):
                         report_lines.extend([
                             f"**💰 {labels['suggested_position_label']}**: {position.get('suggested_position', 'N/A')}",
-                            f"- {labels['entry_plan_label']}: {position.get('entry_plan', 'N/A')}",
-                            f"- {labels['risk_control_label']}: {position.get('risk_control', 'N/A')}",
                             "",
                         ])
-                    # 检查清单
-                    checklist = battle.get('action_checklist', []) if battle else []
+
+                    checklist = battle.get('action_checklist', []) or []
                     if checklist:
+                        failed = [c for c in checklist if str(c).startswith('❌') or str(c).startswith('⚠️')]
+                        if failed:
+                            report_lines.append(f"**{labels['failed_checks_heading']}**:")
+                            for item in failed[:3]:
+                                report_lines.append(f"- {str(item)[:90]}")
+                            report_lines.append("")
+
+                has_details = bool(snapshot) or bool(data_persp) or bool(battle)
+                if has_details:
+                    report_lines.extend([
+                        "<details>",
+                        f"<summary>{'展开详细信息' if report_language == 'zh' else 'Details'}</summary>",
+                        "",
+                    ])
+                    if snapshot:
+                        self._append_market_snapshot(report_lines, result)
+                    if data_persp:
+                        trend_data = data_persp.get('trend_status', {})
+                        price_data = data_persp.get('price_position', {})
+                        vol_data = data_persp.get('volume_analysis', {})
+                        chip_data = data_persp.get('chip_structure', {})
                         report_lines.extend([
-                            f"**✅ {labels['checklist_heading']}**",
+                            f"### 📊 {labels['data_perspective_heading']}",
                             "",
                         ])
-                        for item in checklist:
-                            report_lines.append(f"- {item}")
-                        report_lines.append("")
+                        if trend_data:
+                            is_bullish = (
+                                f"✅ {labels['yes_label']}"
+                                if trend_data.get('is_bullish', False)
+                                else f"❌ {labels['no_label']}"
+                            )
+                            report_lines.extend([
+                                f"**{labels['ma_alignment_label']}**: {trend_data.get('ma_alignment', 'N/A')} | "
+                                f"{labels['bullish_alignment_label']}: {is_bullish} | "
+                                f"{labels['trend_strength_label']}: {trend_data.get('trend_score', 'N/A')}/100",
+                                "",
+                            ])
+                        if price_data:
+                            bias_status = price_data.get('bias_status', 'N/A')
+                            report_lines.extend([
+                                f"| {labels['price_metrics_label']} | {labels['current_price_label']} |",
+                                "|---------|------|",
+                                f"| {labels['current_price_label']} | {price_data.get('current_price', 'N/A')} |",
+                                f"| {labels['ma5_label']} | {price_data.get('ma5', 'N/A')} |",
+                                f"| {labels['ma10_label']} | {price_data.get('ma10', 'N/A')} |",
+                                f"| {labels['ma20_label']} | {price_data.get('ma20', 'N/A')} |",
+                                f"| {labels['bias_ma5_label']} | {price_data.get('bias_ma5', 'N/A')}% {bias_status} |",
+                                f"| {labels['support_level_label']} | {price_data.get('support_level', 'N/A')} |",
+                                f"| {labels['resistance_level_label']} | {price_data.get('resistance_level', 'N/A')} |",
+                                "",
+                            ])
+                        if vol_data:
+                            report_lines.extend([
+                                f"**{labels['volume_label']}**: {labels['volume_ratio_label']} {vol_data.get('volume_ratio', 'N/A')} ({vol_data.get('volume_status', '')}) | "
+                                f"{labels['turnover_rate_label']} {vol_data.get('turnover_rate', 'N/A')}%",
+                                f"💡 *{vol_data.get('volume_meaning', '')}*",
+                                "",
+                            ])
+                        if chip_data:
+                            chip_health = localize_chip_health(chip_data.get('chip_health', 'N/A'), report_language)
+                            report_lines.extend([
+                                f"**{labels['chip_label']}**: {chip_data.get('profit_ratio', 'N/A')} | {chip_data.get('avg_cost', 'N/A')} | "
+                                f"{chip_data.get('concentration', 'N/A')} {chip_health}",
+                                "",
+                            ])
+                    if battle:
+                        position = battle.get('position_strategy', {}) or {}
+                        if position and (position.get('entry_plan') or position.get('risk_control')):
+                            report_lines.extend([
+                                f"**{labels['entry_plan_label']}**: {position.get('entry_plan', 'N/A')}",
+                                f"**{labels['risk_control_label']}**: {position.get('risk_control', 'N/A')}",
+                                "",
+                            ])
+                        checklist = battle.get('action_checklist', []) or []
+                        if checklist:
+                            report_lines.extend([
+                                f"**✅ {labels['checklist_heading']}**",
+                                "",
+                            ])
+                            for item in checklist:
+                                report_lines.append(f"- {item}")
+                            report_lines.append("")
+                    report_lines.extend([
+                        "</details>",
+                        "",
+                    ])
                 
                 # 如果没有 dashboard，显示传统格式
                 if not dashboard:
@@ -1366,7 +1405,7 @@ class NotificationService(
         # Fallback: brief summary from dashboard report
         if not results:
             return f"# {report_date} {labels['brief_title']}\n\n{labels['no_results']}"
-        sorted_results = sorted(results, key=lambda x: x.sentiment_score, reverse=True)
+        sorted_results = list(results)
         buy_count = sum(1 for r in results if getattr(r, 'decision_type', '') == 'buy')
         sell_count = sum(1 for r in results if getattr(r, 'decision_type', '') == 'sell')
         hold_count = sum(1 for r in results if getattr(r, 'decision_type', '') in ('hold', ''))

@@ -113,13 +113,13 @@ def render(
     )
     labels = get_report_labels(report_language)
 
-    # Build template context with pre-computed signal levels (sorted by score)
-    sorted_results = sorted(results, key=lambda x: x.sentiment_score, reverse=True)
-    sorted_enriched = []
-    for r in sorted_results:
+    # Build template context with pre-computed signal levels
+    ordered_results = list(results)
+    ordered_enriched = []
+    for r in ordered_results:
         st, se, _ = get_signal_level(r.operation_advice, r.sentiment_score, report_language)
         rn = get_localized_stock_name(r.name, r.code, report_language)
-        sorted_enriched.append({
+        ordered_enriched.append({
             "result": r,
             "signal_text": st,
             "signal_emoji": se,
@@ -140,8 +140,8 @@ def render(
     context: Dict[str, Any] = {
         "report_date": report_date,
         "report_timestamp": report_timestamp,
-        "results": sorted_results,
-        "enriched": sorted_enriched,  # Sorted by sentiment_score desc
+        "results": ordered_results,
+        "enriched": ordered_enriched,
         "summary_only": summary_only,
         "buy_count": buy_count,
         "sell_count": sell_count,

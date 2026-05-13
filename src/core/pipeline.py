@@ -1793,6 +1793,12 @@ class StockAnalysisPipeline:
                 except Exception as e:
                     logger.error(f"[{code}] 任务执行失败: {e}")
         
+        if results:
+            order_index = {code: idx for idx, code in enumerate(stock_codes)}
+            results.sort(
+                key=lambda r: order_index.get(getattr(r, "code", "") or "", len(order_index) + 1)
+            )
+
         # 统计
         elapsed_time = time.time() - start_time
         
