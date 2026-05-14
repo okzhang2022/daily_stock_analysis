@@ -235,7 +235,7 @@ jobs:
           # ==========================================
           # 核心修正配置 (基于你的个股需求)
           # ==========================================
-          STOCK_LIST: "SNDK,MU,TSLA,AMD,INTC,GLW"
+          STOCK_LIST: "SNDK,SNXX,TSLA,07709.HK,MU,AMD,INTC,GLW"
           MARKET_REVIEW_REGION: "us"
           MARKET_REVIEW_ENABLED: "false"
           TRADING_DAY_CHECK_ENABLED: "false"  # 强制关闭检查，确保出结果

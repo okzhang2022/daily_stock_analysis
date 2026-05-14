@@ -784,6 +784,39 @@ class NotificationService(
                 return value[len(prefix):]
         return value
 
+    @staticmethod
+    def _parse_number(value: Any) -> Optional[float]:
+        if value is None:
+            return None
+        if isinstance(value, (int, float)):
+            try:
+                return float(value)
+            except (TypeError, ValueError):
+                return None
+        text = str(value).strip()
+        if not text or text in {"N/A", "—", "-", "None", "null", "NULL"}:
+            return None
+        cleaned = (
+            text.replace(",", "")
+            .replace("，", "")
+            .replace("元", "")
+            .replace("美元", "")
+            .replace("港元", "")
+            .replace("亿", "")
+            .replace("万股", "")
+            .replace("万", "")
+            .replace("股", "")
+        )
+        if cleaned.endswith("%"):
+            cleaned = cleaned[:-1]
+        cleaned = cleaned.strip()
+        if not cleaned:
+            return None
+        try:
+            return float(cleaned)
+        except ValueError:
+            return None
+
     def _get_signal_level(self, result: AnalysisResult) -> tuple:
         """Get localized signal level and color based on operation advice."""
         return get_signal_level(
@@ -791,6 +824,140 @@ class NotificationService(
             result.sentiment_score,
             self._get_report_language(result),
         )
+
+    def _append_intel_details(
+        self,
+        lines: List[str],
+        intel: Dict[str, Any],
+        report_language: str,
+        labels: Dict[str, str],
+    ) -> None:
+        lines.extend([
+            f"### 📰 {labels['info_heading']}",
+            "",
+        ])
+
+        sentiment = intel.get('sentiment_summary')
+        if sentiment:
+            lines.append(f"- **💭 {labels['sentiment_summary_label']}**: {str(sentiment)[:180]}")
+
+        earnings = intel.get('earnings_outlook')
+        if earnings:
+            lines.append(f"- **📊 {labels['earnings_outlook_label']}**: {str(earnings)[:180]}")
+
+        risk_alerts = intel.get('risk_alerts', []) or []
+        if risk_alerts:
+            lines.append(f"- **🚨 {labels['risk_alerts_label']}**:")
+            for alert in risk_alerts[:3]:
+                lines.append(f"  - {str(alert)[:160]}")
+
+        catalysts = intel.get('positive_catalysts', []) or []
+        if catalysts:
+            lines.append(f"- **✨ {labels['positive_catalysts_label']}**:")
+            for cat in catalysts[:3]:
+                lines.append(f"  - {str(cat)[:160]}")
+
+        latest = intel.get('latest_news')
+        if latest:
+            lines.append(f"- **📢 {labels['latest_news_label']}**: {str(latest)[:180]}")
+
+        lines.append("")
+
+    def _append_swing_focus(
+        self,
+        lines: List[str],
+        result: AnalysisResult,
+        dashboard: Dict[str, Any],
+        report_language: str,
+        labels: Dict[str, str],
+    ) -> None:
+        heading = "### 🧭 Swing Focus" if report_language == "en" else "### 🧭 波段关注"
+        data_persp = (dashboard or {}).get('data_perspective', {}) or {}
+        trend_data = data_persp.get('trend_status', {}) or {}
+        price_data = data_persp.get('price_position', {}) or {}
+        vol_data = data_persp.get('volume_analysis', {}) or {}
+
+        battle = (dashboard or {}).get('battle_plan', {}) or {}
+        sniper = battle.get('sniper_points', {}) or {}
+        position = battle.get('position_strategy', {}) or {}
+
+        intel = (dashboard or {}).get('intelligence', {}) or {}
+        risk_alerts = intel.get('risk_alerts', []) or []
+
+        trend_bits: List[str] = []
+        ma_alignment = trend_data.get('ma_alignment')
+        if ma_alignment:
+            trend_bits.append(str(ma_alignment))
+        trend_score = trend_data.get('trend_score')
+        if str(trend_score or '').strip():
+            trend_bits.append(f"{labels['trend_strength_label']}: {trend_score}/100")
+        if not trend_bits:
+            trend_bits.append(localize_trend_prediction(result.trend_prediction, report_language) or 'N/A')
+
+        levels_bits: List[str] = []
+        support = price_data.get('support_level')
+        resistance = price_data.get('resistance_level')
+        ma10 = price_data.get('ma10')
+        ma20 = price_data.get('ma20')
+        if str(support or '').strip() and str(support) != 'N/A':
+            levels_bits.append(f"{labels['support_level_label']} {support}")
+        if str(resistance or '').strip() and str(resistance) != 'N/A':
+            levels_bits.append(f"{labels['resistance_level_label']} {resistance}")
+        if not levels_bits:
+            if str(ma10 or '').strip() and str(ma10) != 'N/A':
+                levels_bits.append(f"{labels['ma10_label']} {ma10}")
+            if str(ma20 or '').strip() and str(ma20) != 'N/A':
+                levels_bits.append(f"{labels['ma20_label']} {ma20}")
+
+        bias = price_data.get('bias_ma5')
+        bias_status = price_data.get('bias_status')
+        bias_text = None
+        if str(bias or '').strip() and str(bias) != 'N/A':
+            suffix = f" {bias_status}" if str(bias_status or '').strip() and str(bias_status) != 'N/A' else ""
+            bias_text = f"{labels['bias_ma5_label']} {bias}%{suffix}"
+
+        vr = vol_data.get('volume_ratio')
+        vs = vol_data.get('volume_status')
+        vol_text = None
+        if str(vr or '').strip() and str(vr) != 'N/A':
+            tail = f" ({vs})" if str(vs or '').strip() and str(vs) != 'N/A' else ""
+            vol_text = f"{labels['volume_ratio_label']} {vr}{tail}"
+
+        entry_plan = (position.get('entry_plan') or '').strip()
+        risk_control = (position.get('risk_control') or '').strip()
+        stop_loss = sniper.get('stop_loss')
+        take_profit = sniper.get('take_profit')
+
+        key_levels_label = "Key Levels" if report_language == "en" else "关键位"
+
+        lines.extend([
+            heading,
+            "",
+            f"- **{labels['trend_label']}**: {' | '.join(trend_bits) if trend_bits else 'N/A'}",
+            f"- **{key_levels_label}**: {' | '.join(levels_bits) if levels_bits else 'N/A'}",
+        ])
+
+        posvol = " | ".join([x for x in [bias_text, vol_text] if x])
+        if posvol:
+            lines.append(f"- **{'Position/Volume' if report_language == 'en' else '位置/量能'}**: {posvol}")
+
+        if entry_plan:
+            lines.append(f"- **{labels['entry_plan_label']}**: {entry_plan[:160]}")
+        if risk_control:
+            lines.append(f"- **{labels['risk_control_label']}**: {risk_control[:160]}")
+        if (not risk_control) and (stop_loss or take_profit):
+            parts = []
+            if stop_loss is not None and str(stop_loss).strip() and str(stop_loss) != 'N/A':
+                parts.append(f"{labels['stop_loss_label']} {self._clean_sniper_value(stop_loss)}")
+            if take_profit is not None and str(take_profit).strip() and str(take_profit) != 'N/A':
+                parts.append(f"{labels['take_profit_label']} {self._clean_sniper_value(take_profit)}")
+            if parts:
+                lines.append(f"- **{labels['battle_plan_heading']}**: {' | '.join(parts)}")
+
+        if risk_alerts:
+            lines.append(f"- **{labels['risk_alerts_label']}**: {str(risk_alerts[0])[:120]}")
+
+        lines.append("")
     
     def generate_dashboard_report(
         self,
@@ -891,36 +1058,16 @@ class NotificationService(
                     "",
                 ])
                 
-                # ========== 舆情与基本面概览（放在最前面）==========
                 intel = dashboard.get('intelligence', {}) if dashboard else {}
                 if intel:
-                    report_lines.extend([
-                        f"### 📰 {labels['info_heading']}",
-                        "",
-                    ])
-                    if intel.get('sentiment_summary'):
-                        report_lines.append(
-                            f"- **💭 {labels['sentiment_summary_label']}**: {str(intel['sentiment_summary'])[:90]}"
-                        )
-                    if intel.get('earnings_outlook'):
-                        report_lines.append(
-                            f"- **📊 {labels['earnings_outlook_label']}**: {str(intel['earnings_outlook'])[:90]}"
-                        )
-                    risk_alerts = intel.get('risk_alerts', [])
+                    sentiment = intel.get('sentiment_summary')
+                    risk_alerts = intel.get('risk_alerts', []) or []
+                    if sentiment:
+                        report_lines.append(f"💭 {labels['sentiment_summary_label']}: {str(sentiment)[:60]}")
                     if risk_alerts:
-                        report_lines.append(f"- **🚨 {labels['risk_alerts_label']}**:")
-                        for alert in (risk_alerts or [])[:2]:
-                            report_lines.append(f"  - {str(alert)[:80]}")
-                    catalysts = intel.get('positive_catalysts', [])
-                    if catalysts:
-                        report_lines.append(f"- **✨ {labels['positive_catalysts_label']}**:")
-                        for cat in (catalysts or [])[:2]:
-                            report_lines.append(f"  - {str(cat)[:80]}")
-                    if intel.get('latest_news'):
-                        report_lines.append(
-                            f"- **📢 {labels['latest_news_label']}**: {str(intel['latest_news'])[:90]}"
-                        )
-                    report_lines.append("")
+                        report_lines.append(f"🚨 {labels['risk_alerts_label']}: {str(risk_alerts[0])[:60]}")
+                    if sentiment or risk_alerts:
+                        report_lines.append("")
                 
                 # ========== 核心结论 ==========
                 core = dashboard.get('core_conclusion', {}) if dashboard else {}
@@ -963,19 +1110,16 @@ class NotificationService(
                         report_lines.append("📈 " + " | ".join(parts))
                         report_lines.append("")
 
-                data_persp = dashboard.get('data_perspective', {}) if dashboard else {}
-                if data_persp:
-                    trend_data = data_persp.get('trend_status', {}) or {}
-                    price_data = data_persp.get('price_position', {}) or {}
-                    chip_data = data_persp.get('chip_structure', {}) or {}
-                    report_lines.extend([
-                        f"- **{labels['ma_alignment_label']}**: {trend_data.get('ma_alignment', 'N/A')} | {labels['trend_strength_label']}: {trend_data.get('trend_score', 'N/A')}/100",
-                        f"- **{labels['bias_ma5_label']}**: {price_data.get('bias_ma5', 'N/A')}% {price_data.get('bias_status', 'N/A')}",
-                        f"- **{labels['chip_label']}**: {localize_chip_health(chip_data.get('chip_health', 'N/A'), report_language)}",
-                        "",
-                    ])
-
                 battle = dashboard.get('battle_plan', {}) if dashboard else {}
+                data_persp = dashboard.get('data_perspective', {}) if dashboard else {}
+                if data_persp or battle or intel:
+                    self._append_swing_focus(
+                        report_lines,
+                        result,
+                        dashboard,
+                        report_language,
+                        labels,
+                    )
                 if battle:
                     report_lines.extend([
                         f"### 🎯 {labels['battle_plan_heading']}",
@@ -1005,13 +1149,20 @@ class NotificationService(
                                 report_lines.append(f"- {str(item)[:90]}")
                             report_lines.append("")
 
-                has_details = bool(snapshot) or bool(data_persp) or bool(battle)
+                has_details = bool(snapshot) or bool(data_persp) or bool(battle) or bool(intel)
                 if has_details:
                     report_lines.extend([
                         "<details>",
                         f"<summary>{'展开详细信息' if report_language == 'zh' else 'Details'}</summary>",
                         "",
                     ])
+                    if intel:
+                        self._append_intel_details(
+                            report_lines,
+                            intel,
+                            report_language,
+                            labels,
+                        )
                     if snapshot:
                         self._append_market_snapshot(report_lines, result)
                     if data_persp:
@@ -1371,6 +1522,114 @@ class NotificationService(
 
         return content
 
+    def generate_telegram_report(
+        self,
+        results: List[AnalysisResult],
+        report_date: Optional[str] = None,
+    ) -> str:
+        """
+        Generate Telegram-friendly report for mobile reading.
+
+        Avoid tables/details-heavy markdown and keep each stock in a compact
+        card-like block so Telegram Markdown renders consistently.
+        """
+        if report_date is None:
+            report_date = datetime.now().strftime('%Y-%m-%d')
+        if not results:
+            report_language = self._get_report_language(results)
+            labels = get_report_labels(report_language)
+            return f"📮 {report_date} {labels['brief_title']}\n\n{labels['no_results']}"
+
+        report_language = self._get_report_language(results)
+        labels = get_report_labels(report_language)
+        buy_count = sum(1 for r in results if getattr(r, 'decision_type', '') == 'buy')
+        sell_count = sum(1 for r in results if getattr(r, 'decision_type', '') == 'sell')
+        hold_count = sum(1 for r in results if getattr(r, 'decision_type', '') in ('hold', ''))
+
+        lines = [
+            f"📮 {report_date} {labels['brief_title']}",
+            f"🟢{labels['buy_label']} {buy_count}  🟡{labels['watch_label']} {hold_count}  🔴{labels['sell_label']} {sell_count}",
+            "",
+        ]
+
+        for idx, r in enumerate(list(results), start=1):
+            signal_text, signal_emoji, _ = self._get_signal_level(r)
+            name = self._get_display_name(r, report_language)
+            dash = r.dashboard or {}
+            core = dash.get('core_conclusion', {}) or {}
+            intel = dash.get('intelligence', {}) or {}
+            data_persp = dash.get('data_perspective', {}) or {}
+            battle = dash.get('battle_plan', {}) or {}
+
+            trend_data = data_persp.get('trend_status', {}) or {}
+            price_data = data_persp.get('price_position', {}) or {}
+            vol_data = data_persp.get('volume_analysis', {}) or {}
+            sniper = battle.get('sniper_points', {}) or {}
+            position = battle.get('position_strategy', {}) or {}
+
+            one_sentence = (core.get('one_sentence') or r.analysis_summary or '').strip()
+            trend_parts = []
+            ma_alignment = trend_data.get('ma_alignment')
+            if ma_alignment:
+                trend_parts.append(str(ma_alignment))
+            trend_score = trend_data.get('trend_score')
+            if str(trend_score or '').strip():
+                trend_parts.append(f"{labels['trend_strength_label']} {trend_score}/100")
+            trend_text = " | ".join(trend_parts) or localize_trend_prediction(r.trend_prediction, report_language)
+
+            position_parts = []
+            bias = price_data.get('bias_ma5')
+            bias_status = price_data.get('bias_status')
+            if str(bias or '').strip() and str(bias) != 'N/A':
+                suffix = f" {bias_status}" if str(bias_status or '').strip() and str(bias_status) != 'N/A' else ""
+                position_parts.append(f"{labels['bias_ma5_label']} {bias}%{suffix}")
+            support = price_data.get('support_level')
+            resistance = price_data.get('resistance_level')
+            if str(support or '').strip() and str(support) != 'N/A':
+                position_parts.append(f"{labels['support_level_label']} {support}")
+            if str(resistance or '').strip() and str(resistance) != 'N/A':
+                position_parts.append(f"{labels['resistance_level_label']} {resistance}")
+            vr = vol_data.get('volume_ratio')
+            vs = vol_data.get('volume_status')
+            if str(vr or '').strip() and str(vr) != 'N/A':
+                tail = f" ({vs})" if str(vs or '').strip() and str(vs) != 'N/A' else ""
+                position_parts.append(f"{labels['volume_ratio_label']} {vr}{tail}")
+
+            plan_parts = []
+            ideal_buy = sniper.get('ideal_buy')
+            stop_loss = sniper.get('stop_loss')
+            take_profit = sniper.get('take_profit')
+            if ideal_buy is not None and str(ideal_buy).strip() and str(ideal_buy) != 'N/A':
+                plan_parts.append(f"{labels['ideal_buy_label']} {self._clean_sniper_value(ideal_buy)}")
+            if stop_loss is not None and str(stop_loss).strip() and str(stop_loss) != 'N/A':
+                plan_parts.append(f"{labels['stop_loss_label']} {self._clean_sniper_value(stop_loss)}")
+            if take_profit is not None and str(take_profit).strip() and str(take_profit) != 'N/A':
+                plan_parts.append(f"{labels['take_profit_label']} {self._clean_sniper_value(take_profit)}")
+
+            risk_alerts = intel.get('risk_alerts', []) or []
+            risk_text = str(risk_alerts[0])[:80] if risk_alerts else ""
+            entry_plan = (position.get('entry_plan') or '').strip()
+
+            lines.append(
+                f"{idx}. {signal_emoji} **{name}({r.code})** | {localize_operation_advice(r.operation_advice, report_language)} | {labels['score_label']} {r.sentiment_score}"
+            )
+            if trend_text:
+                lines.append(f"趋势: {trend_text}")
+            if position_parts:
+                lines.append(f"位置: {' | '.join(position_parts[:3])}")
+            if plan_parts:
+                lines.append(f"计划: {' | '.join(plan_parts)}")
+            if entry_plan:
+                lines.append(f"动作: {entry_plan[:90]}")
+            if one_sentence:
+                lines.append(f"一句话: {one_sentence[:90]}")
+            if risk_text:
+                lines.append(f"风险: {risk_text}")
+            lines.append("")
+
+        lines.append(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+        return "\n".join(lines)
+
     def generate_brief_report(
         self,
         results: List[AnalysisResult],
@@ -1576,6 +1835,23 @@ class NotificationService(
         report_language = self._get_report_language(result)
         labels = get_report_labels(report_language)
 
+        close = self._parse_number(snapshot.get('close'))
+        prev_close = self._parse_number(snapshot.get('prev_close'))
+        pct_display = snapshot.get('pct_chg', 'N/A')
+        change_display = snapshot.get('change_amount', 'N/A')
+
+        if close is not None and prev_close:
+            computed_change = close - prev_close
+            computed_pct = (computed_change / prev_close) * 100
+            parsed_pct = self._parse_number(pct_display)
+            parsed_change = self._parse_number(change_display)
+            if parsed_pct is None or abs(computed_pct - parsed_pct) >= 0.2:
+                pct_display = f"{computed_pct:+.2f}%"
+            if parsed_change is None or abs(computed_change - parsed_change) >= max(
+                0.01, abs(computed_change) * 0.1
+            ):
+                change_display = f"{computed_change:+.2f}"
+
         lines.extend([
             f"### 📈 {labels['market_snapshot_heading']}",
             "",
@@ -1583,8 +1859,8 @@ class NotificationService(
             "|------|------|------|------|------|-------|-------|------|--------|--------|",
             f"| {snapshot.get('close', 'N/A')} | {snapshot.get('prev_close', 'N/A')} | "
             f"{snapshot.get('open', 'N/A')} | {snapshot.get('high', 'N/A')} | "
-            f"{snapshot.get('low', 'N/A')} | {snapshot.get('pct_chg', 'N/A')} | "
-            f"{snapshot.get('change_amount', 'N/A')} | {snapshot.get('amplitude', 'N/A')} | "
+            f"{snapshot.get('low', 'N/A')} | {pct_display} | "
+            f"{change_display} | {snapshot.get('amplitude', 'N/A')} | "
             f"{snapshot.get('volume', 'N/A')} | {snapshot.get('amount', 'N/A')} |",
         ])
 

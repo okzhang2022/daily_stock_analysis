@@ -2001,7 +2001,11 @@ class StockAnalysisPipeline:
                         if use_image:
                             result = self.notifier._send_telegram_photo(image_bytes)
                         else:
-                            telegram_report = self.notifier.generate_brief_report(results)
+                            telegram_generator = getattr(self.notifier, "generate_telegram_report", None)
+                            if callable(telegram_generator):
+                                telegram_report = telegram_generator(results)
+                            else:
+                                telegram_report = self.notifier.generate_brief_report(results)
                             result = self.notifier.send_to_telegram(telegram_report)
                         non_wechat_success = result or non_wechat_success
                     elif channel == NotificationChannel.EMAIL:
