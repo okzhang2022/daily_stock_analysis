@@ -958,6 +958,50 @@ class NotificationService(
             lines.append(f"- **{labels['risk_alerts_label']}**: {str(risk_alerts[0])[:120]}")
 
         lines.append("")
+
+    @staticmethod
+    def _resolve_time_sensitivity(
+        *,
+        explicit: Any,
+        decision_type: Any,
+        operation_advice: Any,
+        report_language: str,
+        default_value: str,
+    ) -> str:
+        raw = str(explicit or "").strip()
+        if raw:
+            return raw
+
+        op = str(operation_advice or "").strip()
+        op_lower = op.lower()
+        dt = str(decision_type or "").strip().lower()
+        is_actionable = dt in ("buy", "sell") or any(
+            key in op
+            for key in (
+                "买入",
+                "加仓",
+                "卖出",
+                "减仓",
+                "止损",
+                "止盈",
+                "清仓",
+            )
+        ) or any(
+            key in op_lower
+            for key in (
+                "buy",
+                "add",
+                "sell",
+                "reduce",
+                "trim",
+                "stop",
+                "exit",
+                "take profit",
+            )
+        )
+        if is_actionable:
+            return "Today" if report_language == "en" else "今日内"
+        return default_value
     
     def generate_dashboard_report(
         self,
@@ -1072,7 +1116,13 @@ class NotificationService(
                 # ========== 核心结论 ==========
                 core = dashboard.get('core_conclusion', {}) if dashboard else {}
                 one_sentence = core.get('one_sentence', result.analysis_summary)
-                time_sense = core.get('time_sensitivity', labels['default_time_sensitivity'])
+                time_sense = self._resolve_time_sensitivity(
+                    explicit=core.get('time_sensitivity') if isinstance(core, dict) else None,
+                    decision_type=getattr(result, "decision_type", None),
+                    operation_advice=getattr(result, "operation_advice", None),
+                    report_language=report_language,
+                    default_value=labels['default_time_sensitivity'],
+                )
                 pos_advice = core.get('position_advice', {})
                 
                 report_lines.extend([
@@ -1568,6 +1618,13 @@ class NotificationService(
             position = battle.get('position_strategy', {}) or {}
 
             one_sentence = (core.get('one_sentence') or r.analysis_summary or '').strip()
+            time_sense = self._resolve_time_sensitivity(
+                explicit=core.get('time_sensitivity') if isinstance(core, dict) else None,
+                decision_type=getattr(r, "decision_type", None),
+                operation_advice=getattr(r, "operation_advice", None),
+                report_language=report_language,
+                default_value=labels['default_time_sensitivity'],
+            )
             trend_parts = []
             ma_alignment = trend_data.get('ma_alignment')
             if ma_alignment:
@@ -1613,6 +1670,8 @@ class NotificationService(
             lines.append(
                 f"{idx}. {signal_emoji} **{name}({r.code})** | {localize_operation_advice(r.operation_advice, report_language)} | {labels['score_label']} {r.sentiment_score}"
             )
+            if time_sense:
+                lines.append(f"时效: {time_sense}")
             if trend_text:
                 lines.append(f"趋势: {trend_text}")
             if position_parts:

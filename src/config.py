@@ -588,6 +588,7 @@ class Config:
     
     # === 自选股配置 ===
     stock_list: List[str] = field(default_factory=list)
+    holding_list: List[str] = field(default_factory=list)
 
     # === 飞书云文档配置 ===
     feishu_app_id: Optional[str] = None
@@ -931,6 +932,7 @@ class Config:
     _WEBUI_RUNTIME_ENV_FILE_PRIORITY_KEYS = frozenset(
         {
             "STOCK_LIST",
+            "HOLDING_LIST",
             "RUN_IMMEDIATELY",
             "SCHEDULE_ENABLED",
             "SCHEDULE_TIME",
@@ -1051,6 +1053,17 @@ class Config:
         stock_list = [
             (c or "").strip().upper()
             for c in stock_list_str.split(',')
+            if (c or "").strip()
+        ]
+
+        holding_list_str = cls._resolve_env_value(
+            'HOLDING_LIST',
+            default='',
+            prefer_env_file=True,
+        )
+        holding_list = [
+            (c or "").strip().upper()
+            for c in holding_list_str.split(',')
             if (c or "").strip()
         ]
         
@@ -1311,6 +1324,7 @@ class Config:
         
         return cls(
             stock_list=stock_list,
+            holding_list=holding_list,
             feishu_app_id=os.getenv('FEISHU_APP_ID'),
             feishu_app_secret=os.getenv('FEISHU_APP_SECRET'),
             feishu_folder_token=os.getenv('FEISHU_FOLDER_TOKEN'),
@@ -2180,18 +2194,27 @@ class Config:
         env_file = os.getenv("ENV_FILE")
         env_path = Path(env_file) if env_file else (Path(__file__).parent.parent / '.env')
         stock_list_str = ''
+        holding_list_str = ''
         if env_path.exists():
             # 直接从 .env 文件读取最新的配置
             env_values = dotenv_values(env_path)
             stock_list_str = (env_values.get('STOCK_LIST') or '').strip()
+            holding_list_str = (env_values.get('HOLDING_LIST') or '').strip()
 
         # 如果 .env 文件不存在或未配置，才尝试从系统环境变量读取
         if not stock_list_str:
             stock_list_str = os.getenv('STOCK_LIST', '')
+        if not holding_list_str:
+            holding_list_str = os.getenv('HOLDING_LIST', '')
 
         stock_list = [
             (c or "").strip().upper()
             for c in stock_list_str.split(',')
+            if (c or "").strip()
+        ]
+        holding_list = [
+            (c or "").strip().upper()
+            for c in holding_list_str.split(',')
             if (c or "").strip()
         ]
 
@@ -2199,6 +2222,7 @@ class Config:
             stock_list = ['000001']
 
         self.stock_list = stock_list
+        self.holding_list = holding_list
     
     def validate_structured(self) -> List[ConfigIssue]:
         """Return structured validation issues with severity levels.

@@ -430,7 +430,25 @@ def run_full_analysis(
             config.refresh_stock_list()
 
         # Issue #373: Trading day filter (per-stock, per-market)
-        effective_codes = stock_codes if stock_codes is not None else config.stock_list
+        def _merge_priority(primary: List[str], secondary: List[str]) -> List[str]:
+            seen = set()
+            merged: List[str] = []
+            for c in list(primary) + list(secondary):
+                raw = (c or "").strip()
+                if not raw:
+                    continue
+                code = raw.upper()
+                if code in seen:
+                    continue
+                seen.add(code)
+                merged.append(code)
+            return merged
+
+        effective_codes = (
+            stock_codes
+            if stock_codes is not None
+            else _merge_priority(getattr(config, 'holding_list', []) or [], config.stock_list)
+        )
         filtered_codes, effective_region, should_skip = _compute_trading_day_filter(
             config, args, effective_codes
         )

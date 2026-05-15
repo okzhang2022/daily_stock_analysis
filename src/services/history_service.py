@@ -642,7 +642,41 @@ class HistoryService:
         # ========== 核心结论 ==========
         core = dashboard.get('core_conclusion', {}) if dashboard else {}
         one_sentence = core.get('one_sentence', result.analysis_summary)
-        time_sense = core.get('time_sensitivity', labels['default_time_sensitivity'])
+        raw_time = str(core.get('time_sensitivity') or '').strip() if isinstance(core, dict) else ''
+        if raw_time:
+            time_sense = raw_time
+        else:
+            op = str(getattr(result, 'operation_advice', '') or '').strip()
+            op_lower = op.lower()
+            decision_type = str(getattr(result, 'decision_type', '') or '').strip()
+            is_actionable = decision_type in ('buy', 'sell') or any(
+                key in op
+                for key in (
+                    '买入',
+                    '加仓',
+                    '卖出',
+                    '减仓',
+                    '止损',
+                    '止盈',
+                    '清仓',
+                )
+            ) or any(
+                key in op_lower
+                for key in (
+                    'buy',
+                    'add',
+                    'sell',
+                    'reduce',
+                    'trim',
+                    'stop',
+                    'exit',
+                    'take profit',
+                )
+            )
+            if is_actionable:
+                time_sense = 'Today' if report_language == 'en' else '今日内'
+            else:
+                time_sense = labels['default_time_sensitivity']
         pos_advice = core.get('position_advice', {})
 
         report_lines.extend([
